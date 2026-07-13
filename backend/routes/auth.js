@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
+import auth from '../middleware/auth.js';
 
 const router = Router();
 
@@ -37,7 +38,13 @@ router.post('/register', async (req, res) => {
       data: { user: { user_id: user.user_id, name: user.name, email: user.email }, token },
     });
   } catch (err) {
-    res.status(500).json({ status: 'error', message: err.message });
+    // Handle the race condition where two requests with the same email
+    // pass findOne at the same time; the unique index catches it here.
+    if (err.code === 11000) {
+      return res.status(409).json({ status: 'error', message: 'Email already registered' });
+    }
+    console.error('Register error:', err);
+    res.status(500).json({ status: 'error', message: 'Internal server error' });
   }
 });
 
@@ -66,25 +73,21 @@ router.post('/login', async (req, res) => {
       data: { user: { user_id: user.user_id, name: user.name, email: user.email }, token },
     });
   } catch (err) {
-    res.status(500).json({ status: 'error', message: err.message });
+    console.error('Login error:', err);
+    res.status(500).json({ status: 'error', message: 'Internal server error' });
   }
 });
 
-router.get('/me', async (req, res) => {
+router.get('/me', auth, async (req, res) => {
   try {
-    const header = req.headers.authorization;
-    if (!header || !header.startsWith('Bearer ')) {
-      return res.status(401).json({ status: 'error', message: 'No token provided' });
-    }
-    const token = header.split(' ')[1];
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await User.findOne({ user_id: decoded.user_id });
+    const user = await User.findOne({ user_id: req.user.user_id });
     if (!user) {
       return res.status(404).json({ status: 'error', message: 'User not found' });
     }
     res.json({ status: 'success', data: { user: { user_id: user.user_id, name: user.name, email: user.email } } });
   } catch (err) {
-    res.status(401).json({ status: 'error', message: 'Invalid or expired token' });
+    console.error('Me error:', err);
+    res.status(500).json({ status: 'error', message: 'Internal server error' });
   }
 });
 

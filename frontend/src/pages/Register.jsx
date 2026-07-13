@@ -10,17 +10,26 @@ export default function Register() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
+  // Scores character-class diversity (lowercase/uppercase/digit/symbol) plus
+  // length, so a long run of the same character no longer maxes out the meter.
   const getStrength = (val) => {
-    const len = val.length;
-    if (len === 0) return 0;
-    if (len < 6) return 1;
-    if (len < 10) return 2;
-    if (len < 12) return 3;
+    if (val.length === 0) return 0;
+
+    let variety = 0;
+    if (/[a-z]/.test(val)) variety += 1;
+    if (/[A-Z]/.test(val)) variety += 1;
+    if (/[0-9]/.test(val)) variety += 1;
+    if (/[^a-zA-Z0-9]/.test(val)) variety += 1;
+
+    if (val.length < 8) return 1;
+    if (variety <= 1) return 1;
+    if (variety === 2) return 2;
+    if (variety === 3) return 3;
     return 4;
   };
 
   const strength = getStrength(password);
-  const colors = ['bg-surface-container', '#ba1a1a', '#f23d5c', '#006c49', '#006c49'];
+  const colors = ['#e5eeff', '#ba1a1a', '#f23d5c', '#006c49', '#006c49'];
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -28,6 +37,9 @@ export default function Register() {
     setLoading(true);
     try {
       const res = await axios.post('/api/auth/register', { name, email, password });
+      // NOTE: storing the JWT in localStorage is convenient but exposes it to
+      // any XSS on the page. If you want stronger protection, move to an
+      // httpOnly cookie set by the backend instead (requires a small server change).
       localStorage.setItem('token', res.data.data.token);
       navigate('/dashboard');
     } catch (err) {
@@ -42,7 +54,7 @@ export default function Register() {
       <header style={{ position: 'fixed', top: 0, width: '100%', background: '#f8f9ff', zIndex: 50, padding: '16px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', maxWidth: 1280, margin: '0 auto' }}>
           <span style={{ fontSize: 24, fontWeight: 700 }}>Duidku</span>
-          <Link to="/login" style={{ fontSize: 14, color: '#45464d', textDecoration: 'none' }}>Support</Link>
+          <Link to="/login" style={{ fontSize: 14, color: '#45464d', textDecoration: 'none' }}>Sign In</Link>
         </div>
       </header>
       <main style={{ paddingTop: 80, paddingBottom: 48, paddingLeft: 16, paddingRight: 16, minHeight: '100vh', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
@@ -64,14 +76,14 @@ export default function Register() {
             </div>
             <div>
               <label htmlFor="password" style={{ fontSize: 14, fontWeight: 600, color: '#45464d', marginBottom: 8, display: 'block' }}>Password</label>
-              <input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Create a strong password" required
+              <input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Create a strong password" required minLength={8}
                 style={{ width: '100%', padding: 12, borderRadius: 8, border: '1px solid #c6c6cd', fontSize: 16, outline: 'none', boxSizing: 'border-box' }} />
               <div style={{ display: 'flex', gap: 4, marginTop: 8 }}>
                 {[1, 2, 3, 4].map((i) => (
                   <div key={i} style={{ flex: 1, height: 4, borderRadius: 2, background: i <= strength ? colors[strength] : '#e5eeff' }} />
                 ))}
               </div>
-              <p style={{ fontSize: 14, color: '#45464d', marginTop: 4 }}>Minimum 8 characters</p>
+              <p style={{ fontSize: 14, color: '#45464d', marginTop: 4 }}>Minimum 8 characters, mix upper/lowercase, numbers &amp; symbols for a stronger score</p>
             </div>
             <button type="submit" disabled={loading}
               style={{ width: '100%', padding: 12, background: '#000', color: '#fff', fontWeight: 600, fontSize: 16, borderRadius: 8, border: 'none', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1, boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>

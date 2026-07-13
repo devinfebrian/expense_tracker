@@ -16,6 +16,9 @@ export default function Login() {
     setLoading(true);
     try {
       const res = await axios.post('/api/auth/login', { email, password });
+      // NOTE: storing the JWT in localStorage is convenient but exposes it to
+      // any XSS on the page. If you want stronger protection, move to an
+      // httpOnly cookie set by the backend instead (requires a small server change).
       localStorage.setItem('token', res.data.data.token);
       navigate('/dashboard');
     } catch (err) {
@@ -50,7 +53,7 @@ export default function Login() {
               <div style={{ position: 'relative' }}>
                 <input id="password" type={showPass ? 'text' : 'password'} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" required
                   style={{ width: '100%', padding: '12px 16px', borderRadius: 8, border: '1px solid #c6c6cd', fontSize: 16, outline: 'none', boxSizing: 'border-box' }} />
-                <button type="button" onClick={() => setShowPass(!showPass)}
+                <button type="button" onClick={() => setShowPass(!showPass)} aria-label={showPass ? 'Hide password' : 'Show password'}
                   style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#45464d', fontSize: 20 }}>
                   {showPass ? '🙈' : '👁'}
                 </button>
