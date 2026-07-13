@@ -1,8 +1,19 @@
 import { Router } from 'express';
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
+import auth from '../middleware/auth.js';
+import { registerLimiter, loginLimiter } from '../middleware/rateLimit.js';
 
 const router = Router();
+
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const COOKIE_OPTIONS = {
+  httpOnly: true,
+  sameSite: 'lax',
+  secure: process.env.NODE_ENV === 'production',
+  maxAge: 7 * 24 * 60 * 60 * 1000,
+};
 
 const signToken = (user) => {
   return jwt.sign(
@@ -12,7 +23,13 @@ const signToken = (user) => {
   );
 };
 
-router.post('/register', async (req, res) => {
+const attachUser = (user) => ({
+  user_id: user.user_id,
+  name: user.name,
+  email: user.email,
+});
+
+router.post('/register', registerLimiter, async (req, res) => {
   try {
     const { name, email, password } = req.body;
 
@@ -24,6 +41,10 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ status: 'error', message: 'Password must be at least 8 characters' });
     }
 
+    if (!EMAIL_REGEX.test(email)) {
+      return res.status(400).json({ status: 'error', message: 'Please provide a valid email address' });
+    }
+
     const existing = await User.findOne({ email });
     if (existing) {
       return res.status(409).json({ status: 'error', message: 'Email already registered' });
@@ -32,16 +53,24 @@ router.post('/register', async (req, res) => {
     const user = await User.create({ name, email, password });
     const token = signToken(user);
 
+    res.cookie('token', token, COOKIE_OPTIONS);
     res.status(201).json({
       status: 'success',
-      data: { user: { user_id: user.user_id, name: user.name, email: user.email }, token },
+      data: { user: attachUser(user) },
     });
   } catch (err) {
-    res.status(500).json({ status: 'error', message: err.message });
+    if (err.code === 11000) {
+      return res.status(409).json({ status: 'error', message: 'Email already registered' });
+    }
+    if (err.name === 'ValidationError') {
+      return res.status(400).json({ status: 'error', message: err.message });
+    }
+    console.error('Register error:', err);
+    res.status(500).json({ status: 'error', message: 'Internal server error' });
   }
 });
 
-router.post('/login', async (req, res) => {
+router.post('/login', loginLimiter, async (req, res) => {
   try {
     const { email, password } = req.body;
 
@@ -61,30 +90,32 @@ router.post('/login', async (req, res) => {
 
     const token = signToken(user);
 
+    res.cookie('token', token, COOKIE_OPTIONS);
     res.json({
       status: 'success',
-      data: { user: { user_id: user.user_id, name: user.name, email: user.email }, token },
+      data: { user: attachUser(user) },
     });
   } catch (err) {
-    res.status(500).json({ status: 'error', message: err.message });
+    console.error('Login error:', err);
+    res.status(500).json({ status: 'error', message: 'Internal server error' });
   }
 });
 
-router.get('/me', async (req, res) => {
+router.post('/logout', (req, res) => {
+  res.clearCookie('token', COOKIE_OPTIONS);
+  res.json({ status: 'success' });
+});
+
+router.get('/me', auth, async (req, res) => {
   try {
-    const header = req.headers.authorization;
-    if (!header || !header.startsWith('Bearer ')) {
-      return res.status(401).json({ status: 'error', message: 'No token provided' });
-    }
-    const token = header.split(' ')[1];
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await User.findOne({ user_id: decoded.user_id });
+    const user = await User.findOne({ user_id: req.user.user_id });
     if (!user) {
       return res.status(404).json({ status: 'error', message: 'User not found' });
     }
-    res.json({ status: 'success', data: { user: { user_id: user.user_id, name: user.name, email: user.email } } });
+    res.json({ status: 'success', data: { user: attachUser(user) } });
   } catch (err) {
-    res.status(401).json({ status: 'error', message: 'Invalid or expired token' });
+    console.error('Me error:', err);
+    res.status(500).json({ status: 'error', message: 'Internal server error' });
   }
 });
 
