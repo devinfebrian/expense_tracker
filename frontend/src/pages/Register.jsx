@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import axios from 'axios';
+import { useAuth } from '../hooks/useAuth.js';
 
 export default function Register() {
   const [name, setName] = useState('');
@@ -9,6 +9,7 @@ export default function Register() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { register } = useAuth();
 
   // Scores character-class diversity (lowercase/uppercase/digit/symbol) plus
   // length, so a long run of the same character no longer maxes out the meter.
@@ -36,11 +37,7 @@ export default function Register() {
     setError('');
     setLoading(true);
     try {
-      const res = await axios.post('/api/auth/register', { name, email, password });
-      // NOTE: storing the JWT in localStorage is convenient but exposes it to
-      // any XSS on the page. If you want stronger protection, move to an
-      // httpOnly cookie set by the backend instead (requires a small server change).
-      localStorage.setItem('token', res.data.data.token);
+      await register(name, email, password);
       navigate('/dashboard');
     } catch (err) {
       setError(err.response?.data?.message || 'Registration failed');

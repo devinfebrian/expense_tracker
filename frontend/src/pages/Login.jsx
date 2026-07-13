@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import axios from 'axios';
+import { useAuth } from '../hooks/useAuth.js';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -9,17 +9,14 @@ export default function Login() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
     try {
-      const res = await axios.post('/api/auth/login', { email, password });
-      // NOTE: storing the JWT in localStorage is convenient but exposes it to
-      // any XSS on the page. If you want stronger protection, move to an
-      // httpOnly cookie set by the backend instead (requires a small server change).
-      localStorage.setItem('token', res.data.data.token);
+      await login(email, password);
       navigate('/dashboard');
     } catch (err) {
       setError(err.response?.data?.message || 'Login failed');
