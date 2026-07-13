@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth.js';
+import './Auth.css';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -19,51 +20,127 @@ export default function Login() {
       await login(email, password);
       navigate('/dashboard');
     } catch (err) {
-      setError(err.response?.data?.message || 'Login failed');
+      setError(err.response?.data?.message || 'Login failed. Please check your credentials.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f8f9ff', fontFamily: 'Inter, sans-serif', display: 'flex', flexDirection: 'column' }}>
-      <header style={{ padding: '16px', textAlign: 'center' }}>
-        <h1 style={{ fontSize: '24px', fontWeight: 700, color: '#0b1c30' }}>Duidku</h1>
-      </header>
-      <main style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '0 16px 48px' }}>
-        <div style={{ maxWidth: 400, width: '100%', textAlign: 'center', marginBottom: 32 }}>
-          <h2 style={{ fontSize: 28, fontWeight: 600, color: '#0b1c30', marginBottom: 8 }}>Sign In</h2>
-          <p style={{ color: '#45464d', fontSize: 16 }}>Please enter your details to sign in</p>
+    <div className="auth-page">
+      {/* Pattern Overlays */}
+      <div className="auth-bg-patterns">
+        <div className="auth-bg-pattern-1">
+          <img src="https://lh3.googleusercontent.com/aida-public/AB6AXuCz4vR0d5-A1sLEZjjq1hL1XyDUjR5XKk1x02gKWpl2OYjZGLlBxNC-dmtLNqUWT2EYFJm6uDQU5WG5t-KyJnpl5Raeuic8bPToK5mcVXsC5EzO8icxDvNp_26InZA1of9COkRGdL67pVUoggwivD7ZYs02QlIwq0Uy-glp5erlP7bbCawem5I4aTyXrqFzaSvtqA7xdjS2M44s874YDLl3g_EtieGdGHRZxtI85IGNPLv1S96dgcuwqQ" alt="Subtle architectural pattern" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
         </div>
-        <div style={{ maxWidth: 400, width: '100%', background: '#fff', border: '1px solid #E2E8F0', borderRadius: 8, padding: 24, boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
-          {error && <p style={{ color: '#ba1a1a', marginBottom: 16, fontSize: 14, textAlign: 'center' }}>{error}</p>}
-          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-            <div>
-              <label htmlFor="email" style={{ display: 'block', fontWeight: 600, color: '#0b1c30', marginBottom: 8, fontSize: 16 }}>Email Address</label>
-              <input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@company.com" required
-                style={{ width: '100%', padding: '12px 16px', borderRadius: 8, border: '1px solid #c6c6cd', fontSize: 16, outline: 'none', boxSizing: 'border-box' }} />
+        <div className="auth-bg-pattern-2">
+          <img src="https://lh3.googleusercontent.com/aida-public/AB6AXuAg2TknQN2OSWAdx77TPOtlOfPtarlw_UJ5zAUaTRRwv36IdTIb6uMzhIDY5cPBVhRjQbkn0oJ7CWb7NIV2KRyELTPHzDOgmlYsaVzItIh80-0QyOcFepY8-5Znn7w3e8M3obBrYZZNurJ_z2YhLpkhmGqj-0Pma95kZYN_iqG4VQRMWh6TDUmnIfJFpLq-_rpqOSrOWsPRN-INaUk4bhfeYMEEAT9lzbgJRltKUpGMOMBlNbFpJFX2Gw" alt="Premium paper texture pattern" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+        </div>
+      </div>
+
+      <header className="auth-header">
+        <div className="auth-brand">Duidku</div>
+      </header>
+
+      <main className="auth-main">
+        <div className="auth-card-wrapper">
+          <div className="auth-brand-center">
+            <h1 className="auth-brand-title">Duidku</h1>
+          </div>
+
+          <div className="auth-card">
+            <div className="auth-card-header">
+              <h2 className="auth-card-title">Sign In</h2>
+              <p className="auth-card-subtitle">Please enter your details to sign in</p>
             </div>
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                <label htmlFor="password" style={{ fontWeight: 600, color: '#0b1c30', fontSize: 16 }}>Password</label>
+
+            {error && (
+              <div className="auth-error-banner">
+                <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>error</span>
+                <span>{error}</span>
               </div>
-              <div style={{ position: 'relative' }}>
-                <input id="password" type={showPass ? 'text' : 'password'} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" required
-                  style={{ width: '100%', padding: '12px 16px', borderRadius: 8, border: '1px solid #c6c6cd', fontSize: 16, outline: 'none', boxSizing: 'border-box' }} />
-                <button type="button" onClick={() => setShowPass(!showPass)} aria-label={showPass ? 'Hide password' : 'Show password'}
-                  style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#45464d', fontSize: 20 }}>
-                  {showPass ? '🙈' : '👁'}
-                </button>
+            )}
+
+            <form onSubmit={handleSubmit} className="auth-form">
+              {/* Email Field */}
+              <div className="auth-field">
+                <label htmlFor="email" className="auth-label">Email Address</label>
+                <div className="auth-input-wrapper">
+                  <input 
+                    id="email" 
+                    type="email" 
+                    value={email} 
+                    onChange={(e) => setEmail(e.target.value)} 
+                    placeholder="name@company.com" 
+                    required 
+                    className="auth-input"
+                  />
+                  <span className="material-symbols-outlined auth-input-icon">mail</span>
+                </div>
               </div>
-            </div>
-            <button type="submit" disabled={loading}
-              style={{ width: '100%', padding: '12px', background: '#213145', color: '#fff', fontWeight: 600, fontSize: 16, borderRadius: 8, border: 'none', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1 }}>
-              {loading ? 'Signing in...' : 'Sign In'}
-            </button>
-          </form>
-          <p style={{ marginTop: 24, textAlign: 'center', color: '#45464d', fontSize: 16 }}>
-            Don't have an account? <Link to="/register" style={{ color: '#006c49', fontWeight: 600, textDecoration: 'underline' }}>Register Now</Link>
-          </p>
+
+              {/* Password Field */}
+              <div className="auth-field">
+                <div className="auth-label-row">
+                  <label htmlFor="password" className="auth-label">Password</label>
+                  <a href="#" className="auth-link-forgot" onClick={(e) => { e.preventDefault(); alert('Reset password simulation'); }}>Forgot?</a>
+                </div>
+                <div className="auth-input-wrapper">
+                  <input 
+                    id="password" 
+                    type={showPass ? 'text' : 'password'} 
+                    value={password} 
+                    onChange={(e) => setPassword(e.target.value)} 
+                    placeholder="••••••••" 
+                    required 
+                    className="auth-input"
+                    style={{ paddingRight: '48px' }}
+                  />
+                  <span className="material-symbols-outlined auth-input-icon">lock</span>
+                  <button 
+                    type="button" 
+                    onClick={() => setShowPass(!showPass)} 
+                    aria-label={showPass ? 'Hide password' : 'Show password'}
+                    style={{ 
+                      position: 'absolute', 
+                      right: '12px', 
+                      background: 'none', 
+                      border: 'none', 
+                      cursor: 'pointer', 
+                      color: '#45464d', 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center',
+                      padding: '4px'
+                    }}
+                  >
+                    <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>
+                      {showPass ? 'visibility' : 'visibility_off'}
+                    </span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Submit Button */}
+              <button type="submit" disabled={loading} className="auth-btn-submit">
+                {loading ? (
+                  <>
+                    <span className="material-symbols-outlined animate-spin" style={{ fontSize: '18px' }}>progress_activity</span>
+                    <span>Authenticating...</span>
+                  </>
+                ) : (
+                  <span>Sign In</span>
+                )}
+              </button>
+            </form>
+          </div>
+
+          <div className="auth-footer">
+            <p className="auth-footer-text">
+              Don't have an account?{' '}
+              <Link to="/register" className="auth-footer-link">Register Now</Link>
+            </p>
+          </div>
         </div>
       </main>
     </div>
