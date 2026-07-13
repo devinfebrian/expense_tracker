@@ -60,7 +60,8 @@ git push
 ```
 > Kalau ini pertama kali push branch tersebut, biasanya perlu:
 > ```bash
-> git push -u origin main
+> git push -u origin <branch sendiri> contoh dev-rivan
+>
 > ```
 > Setelah itu, cukup `git push` saja untuk push berikutnya.
 
