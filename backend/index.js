@@ -30,7 +30,7 @@ app.use(express.json());
 app.get('/api/health', (req, res) => {
   res.status(200).json({
     status: 'success',
-    message: 'Expense Tracker API is running smoothly',
+    message: 'Expense Tracker Auth API is running smoothly',
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || 'development',
     version: '1.0.0'
