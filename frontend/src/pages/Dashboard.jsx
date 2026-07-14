@@ -1,16 +1,33 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Layout from '../components/Layout';
-import api from '../api/axios.js';
+import SummaryCard from '../components/SummaryCard';
+import TransactionTable from '../components/TransactionTable';
+import TransactionModal from '../components/TransactionModal';
+import { useTransactionStore } from '../store/useTransactionStore';
+import { useBudgetStore } from '../store/useBudgetStore';
+import { useAuthStore } from '../store/useAuthStore';
 
 export default function Dashboard() {
-  const [transactions, setTransactions] = useState([]);
-  const [budgets, setBudgets] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const user = useAuthStore(state => state.user);
+  const transactions = useTransactionStore(state => state.transactions);
+  const categories = useTransactionStore(state => state.categories);
+  const loadTransactions = useTransactionStore(state => state.loadTransactions);
+  const loadCategories = useTransactionStore(state => state.loadCategories);
+  const addTransaction = useTransactionStore(state => state.addTransaction);
+  const loadingTxns = useTransactionStore(state => state.loading);
 
-  const getCategoryClass = (cat) => {
-    return 'surface-container-highest text-primary';
-  };
+  const budgets = useBudgetStore(state => state.budgets);
+  const loadBudgets = useBudgetStore(state => state.loadBudgets);
+  const loadingBudgets = useBudgetStore(state => state.loading);
+
+  const [showModal, setShowModal] = useState(false);
+
+  useEffect(() => {
+    loadTransactions();
+    loadBudgets(user);
+    loadCategories();
+  }, [loadTransactions, loadBudgets, loadCategories, user]);
 
   const getCategoryIcon = (cat) => {
     const c = cat?.toLowerCase() || '';
@@ -22,28 +39,18 @@ export default function Dashboard() {
     return 'account_balance_wallet';
   };
 
-  const loadData = useCallback(async () => {
+  const handleSave = async (formPayload) => {
     try {
-      const [budgetRes, txRes] = await Promise.all([
-        api.get('/budgets'),
-        api.get('/transactions')
-      ]);
-      
-      const rawBudgets = budgetRes.data.data.budgets || budgetRes.data.data || [];
-      const rawTxns = txRes.data.data.transactions || txRes.data.data || [];
-      
-      setBudgets(rawBudgets);
-      setTransactions(rawTxns);
+      await addTransaction(formPayload);
+      setShowModal(false);
+      loadBudgets(user); // Reload budgets to update spent progress in real-time
     } catch (err) {
-      console.error('Failed to load dashboard data:', err);
-    } finally {
-      setLoading(false);
+      console.error('Failed to save transaction:', err);
+      alert(err.response?.data?.message || 'Failed to save transaction');
     }
-  }, []);
+  };
 
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
+  const loading = loadingTxns || loadingBudgets;
 
   // 1. Dynamic summary calculations
   const totalExpenses = transactions.reduce((sum, t) => sum + t.amount, 0);
@@ -130,9 +137,9 @@ export default function Dashboard() {
   };
 
   const calculatedBudgets = budgets.map(b => {
-    const startOfPeriod = getPeriodStart(b.period);
+    const startOfPeriod = getPeriodStart(b.type || b.period);
     const categoryTxns = transactions.filter(t => 
-      t.category.toLowerCase() === b.name.toLowerCase() && 
+      t.category.toLowerCase() === b.category_name.toLowerCase() && 
       new Date(t.date) >= startOfPeriod
     );
     const spent = categoryTxns.reduce((sum, t) => sum + t.amount, 0);
@@ -156,11 +163,11 @@ export default function Dashboard() {
       status,
       statusClass,
       warning,
-      icon: b.icon || getCategoryIcon(b.name)
+      icon: b.icon || getCategoryIcon(b.category_name)
     };
   });
 
-  if (loading) {
+  if (loading && transactions.length === 0) {
     return (
       <Layout>
         <div style={{ display: 'flex', minHeight: '60vh', alignItems: 'center', justifyContent: 'center', fontFamily: 'Inter, sans-serif', color: '#45464d' }}>
@@ -178,51 +185,41 @@ export default function Dashboard() {
           <p className="page-subtitle">Track and manage your daily spending.</p>
         </div>
         <div className="page-actions">
-          <button className="btn-secondary">
-            <span className="material-symbols-outlined">calendar_month</span>
-            <span className="btn-text">This Month</span>
-          </button>
-          <Link to="/budgets" className="btn-primary">Set Budget</Link>
+          <button className="btn-primary" onClick={() => setShowModal(true)}>+ Add Expense</button>
+          <Link to="/budgets" className="btn-secondary">Set Budget</Link>
         </div>
       </div>
 
-      {/* Facts Row: Small horizontal cards for key metrics */}
+      {/* Facts Row */}
       <div className="facts-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px', marginBottom: '24px' }}>
-        <div className="summary-card">
-          <p className="summary-label">TOTAL EXPENSES</p>
-          <h3 className="summary-value">Rp{totalExpenses.toLocaleString('id-ID')}</h3>
-          <div className="summary-trend">
-            <span className="material-symbols-outlined" style={{ color: expenseChange >= 0 ? 'var(--error)' : 'var(--on-secondary-container)' }}>
-              {expenseChange >= 0 ? 'trending_up' : 'trending_down'}
-            </span>
-            <span className="summary-trend-text" style={{ color: expenseChange >= 0 ? 'var(--error)' : 'var(--on-secondary-container)' }}>
-              {Math.abs(expenseChange)}% from last month
-            </span>
-          </div>
-        </div>
-        <div className="summary-card">
-          <p className="summary-label">THIS MONTH</p>
-          <h3 className="summary-value text-secondary">Rp{totalSpent.toLocaleString('id-ID')}</h3>
+        <SummaryCard 
+          label="TOTAL EXPENSES" 
+          value={`Rp${totalExpenses.toLocaleString('id-ID')}`}
+          trend={`${Math.abs(expenseChange)}% from last month`}
+          trendIcon={expenseChange >= 0 ? 'trending_up' : 'trending_down'}
+          trendColor={expenseChange >= 0 ? 'var(--error)' : 'var(--on-secondary-container)'}
+        />
+        <SummaryCard 
+          label="THIS MONTH" 
+          value={`Rp${totalSpent.toLocaleString('id-ID')}`}
+          valueClass="text-secondary"
+          subtext={`Rp${remainingBudget.toLocaleString('id-ID')} remaining`}
+        >
           <div className="progress-bar">
             <div className="progress-fill bg-secondary" style={{ width: `${expenseProgress}%` }} />
           </div>
-          <p className="summary-trend-text" style={{ marginTop: 4, color: 'var(--on-surface-variant)' }}>
-            Rp{remainingBudget.toLocaleString('id-ID')} remaining
-          </p>
-        </div>
-        <div className="summary-card">
-          <p className="summary-label">DAILY AVERAGE</p>
-          <h3 className="summary-value text-tertiary">Rp{dailyAverage.toLocaleString('id-ID')}</h3>
-          <div className="summary-trend">
-            <span className="material-symbols-outlined">info</span>
-            <span className="summary-trend-text" style={{ color: 'var(--on-surface-variant)' }}>Based on current month days</span>
-          </div>
-        </div>
+        </SummaryCard>
+        <SummaryCard 
+          label="DAILY AVERAGE" 
+          value={`Rp${dailyAverage.toLocaleString('id-ID')}`}
+          valueClass="text-tertiary"
+          trend="Based on current month days"
+          trendIcon="info"
+          trendColor="var(--on-surface-variant)"
+        />
       </div>
 
-      {/* Main Dashboard Cards Grid */}
       <div className="dashboard-grid">
-        {/* Row 1: Expense Categories & Recent Expenses */}
         <div className="chart-card col-span-4">
           <h4 className="chart-title">Expense Categories</h4>
           <div className="doughnut-container">
@@ -251,46 +248,13 @@ export default function Dashboard() {
             <h4 className="chart-title">Recent Expenses</h4>
             <Link to="/transactions" className="chart-link">View All</Link>
           </div>
-          <div className="table-wrapper">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>MERCHANT</th>
-                  <th>CATEGORY</th>
-                  <th>DATE</th>
-                  <th className="text-right">AMOUNT</th>
-                </tr>
-              </thead>
-              <tbody>
-                {transactions.length === 0 ? (
-                  <tr>
-                    <td colSpan="4" style={{ textAlign: 'center', color: 'var(--on-surface-variant)', padding: '24px 0' }}>
-                      No expenses logged yet.
-                    </td>
-                  </tr>
-                ) : (
-                  transactions.slice(0, 5).map(txn => (
-                    <tr key={txn.id}>
-                      <td>
-                        <div className="merchant-cell">
-                          <div className="merchant-icon">
-                            <span className="material-symbols-outlined">{txn.icon || getCategoryIcon(txn.category)}</span>
-                          </div>
-                          <span>{txn.merchant}</span>
-                        </div>
-                      </td>
-                      <td><span className="category-chip surface-container-highest text-primary">{txn.category}</span></td>
-                      <td className="text-on-surface-variant">{txn.date}</td>
-                      <td className="text-right text-tertiary">-Rp{txn.amount.toLocaleString('id-ID')}</td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+          <TransactionTable 
+            transactions={transactions} 
+            showActions={false} 
+            limit={5} 
+          />
         </div>
 
-        {/* Row 2: Budget Health (Full Width) */}
         <div className="chart-card" style={{ gridColumn: 'span 12' }}>
           <div className="chart-header">
             <h4 className="chart-title">Budget Health</h4>
@@ -303,9 +267,9 @@ export default function Dashboard() {
               </p>
             ) : (
               calculatedBudgets.map(b => (
-                <div key={b.id} className="budget-item" style={{ background: 'var(--surface-container-low)', padding: '16px', borderRadius: '8px', border: '1px solid var(--outline-variant)' }}>
+                <div key={b.budget_id || b.id} className="budget-item" style={{ background: 'var(--surface-container-low)', padding: '16px', borderRadius: '8px', border: '1px solid var(--outline-variant)' }}>
                   <div className="budget-header">
-                    <span className="budget-label">{b.name.toUpperCase()}</span>
+                    <span className="budget-label">{b.category_name?.toUpperCase() || b.name?.toUpperCase()}</span>
                     <span className={`budget-amount ${b.warning ? 'text-tertiary' : ''}`}>
                       Rp{b.spent.toLocaleString('id-ID')} / Rp{b.limit.toLocaleString('id-ID')}
                     </span>
@@ -314,7 +278,7 @@ export default function Dashboard() {
                     <div className={`progress-fill ${b.warning ? 'bg-tertiary' : 'bg-secondary'}`} style={{ width: `${Math.min(b.percentage, 100)}%` }} />
                   </div>
                   <div className="budget-header" style={{ marginTop: 8 }}>
-                    <span className="text-on-surface-variant" style={{ fontSize: 10 }}>{b.period.toUpperCase()}</span>
+                    <span className="text-on-surface-variant" style={{ fontSize: 10 }}>{(b.type || b.period)?.toUpperCase()}</span>
                     <span className={b.statusClass} style={{ fontSize: 11, fontWeight: 600 }}>{b.status}</span>
                   </div>
                 </div>
@@ -323,7 +287,6 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Row 3: Spending Trends Chart (Full Width) */}
         <div className="chart-card" style={{ gridColumn: 'span 12' }}>
           <div className="chart-header">
             <h4 className="chart-title">Spending Trends</h4>
@@ -346,6 +309,14 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+
+      <TransactionModal 
+        isOpen={showModal}
+        editingItem={null}
+        categories={categories}
+        onClose={() => setShowModal(false)}
+        onSave={handleSave}
+      />
     </Layout>
   );
 }
