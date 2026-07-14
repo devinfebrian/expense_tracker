@@ -1,19 +1,49 @@
-import { useState, useEffect } from 'react';
+/* eslint-disable react-hooks/set-state-in-effect */
+import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import Layout from '../components/Layout';
-import { getTransactions, getBudgets } from '../utils/storage.js';
+import api from '../api/axios.js';
 
 export default function Dashboard() {
   const [transactions, setTransactions] = useState([]);
   const [budgets, setBudgets] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    // Load local client-side data instead of calling backend APIs
-    setTransactions(getTransactions());
-    setBudgets(getBudgets());
-    setLoading(false);
+  const getCategoryClass = (cat) => {
+    const c = cat?.toLowerCase() || '';
+    if (c.includes('food') || c.includes('drinks')) return 'bg-secondary-container text-on-secondary-fixed-variant';
+    if (c.includes('living') || c.includes('rent') || c.includes('housing') || c.includes('dorm')) return 'bg-tertiary-fixed text-on-tertiary-fixed-variant';
+    return 'surface-container-highest text-primary';
+  };
+
+  const getCategoryIcon = (cat) => {
+    const c = cat?.toLowerCase() || '';
+    if (c.includes('food') || c.includes('drinks') || c.includes('meals')) return 'restaurant';
+    if (c.includes('transport') || c.includes('taxi') || c.includes('bus') || c.includes('car')) return 'directions_car';
+    if (c.includes('education') || c.includes('books') || c.includes('school')) return 'school';
+    if (c.includes('living') || c.includes('rent') || c.includes('dorm') || c.includes('housing')) return 'home';
+    if (c.includes('personal') || c.includes('entertainment') || c.includes('shopping') || c.includes('movie') || c.includes('games')) return 'celebration';
+    return 'account_balance_wallet';
+  };
+
+  const loadData = useCallback(async () => {
+    try {
+      const [budgetRes, txRes] = await Promise.all([
+        api.get('/budgets'),
+        api.get('/transactions')
+      ]);
+      setBudgets(budgetRes.data.data.budgets);
+      setTransactions(txRes.data.data.transactions);
+    } catch (err) {
+      console.error('Failed to load dashboard data:', err);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   // 1. Dynamic summary calculations
   const totalExpenses = transactions.reduce((sum, t) => sum + t.amount, 0);
@@ -72,7 +102,7 @@ export default function Dashboard() {
   // 3. Category shares calculations
   const categoriesMap = {};
   transactions.forEach(t => {
-    categoriesMap[t.category] = (categoriesMap[t.category] || 0) + t.amount;
+    categoriesMap[t.category_name] = (categoriesMap[t.category_name] || 0) + t.amount;
   });
   const totalCategoryAmount = Object.values(categoriesMap).reduce((s, v) => s + v, 0);
   const categoryBreakdown = Object.keys(categoriesMap).map(cat => {
@@ -87,10 +117,10 @@ export default function Dashboard() {
   ];
 
   // 4. Budget Health calculations
-  const getPeriodStart = (period) => {
-    if (period === 'daily') {
+  const getPeriodStart = (type) => {
+    if (type === 'daily') {
       return new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    } else if (period === 'weekly') {
+    } else if (type === 'weekly') {
       const day = now.getDay();
       const diff = now.getDate() - day + (day === 0 ? -6 : 1);
       return new Date(now.getFullYear(), now.getMonth(), diff);
@@ -99,19 +129,10 @@ export default function Dashboard() {
     }
   };
 
-  const getBudgetIcon = (name) => {
-    const n = name.toLowerCase();
-    if (n.includes('housing') || n.includes('rent')) return 'home';
-    if (n.includes('dining') || n.includes('restaurant') || n.includes('food') || n.includes('grocery') || n.includes('groceries')) return 'restaurant';
-    if (n.includes('transport') || n.includes('car')) return 'directions_car';
-    if (n.includes('entertainment') || n.includes('movie') || n.includes('netflix')) return 'movie';
-    return 'account_balance_wallet';
-  };
-
   const calculatedBudgets = budgets.map(b => {
-    const startOfPeriod = getPeriodStart(b.period);
+    const startOfPeriod = getPeriodStart(b.type);
     const categoryTxns = transactions.filter(t => 
-      t.category.toLowerCase() === b.name.toLowerCase() && 
+      t.category_id === b.category_id && 
       new Date(t.date) >= startOfPeriod
     );
     const spent = categoryTxns.reduce((sum, t) => sum + t.amount, 0);
@@ -135,7 +156,7 @@ export default function Dashboard() {
       status,
       statusClass,
       warning,
-      icon: b.icon || getBudgetIcon(b.name)
+      icon: getCategoryIcon(b.category_name)
     };
   });
 
@@ -249,16 +270,16 @@ export default function Dashboard() {
                   </tr>
                 ) : (
                   transactions.slice(0, 5).map(txn => (
-                    <tr key={txn.id}>
+                    <tr key={txn.transaction_id}>
                       <td>
                         <div className="merchant-cell">
                           <div className="merchant-icon">
-                            <span className="material-symbols-outlined">{txn.icon}</span>
+                            <span className="material-symbols-outlined">{getCategoryIcon(txn.category_name)}</span>
                           </div>
                           <span>{txn.merchant}</span>
                         </div>
                       </td>
-                      <td><span className={`category-chip ${txn.categoryClass || 'surface-container-highest text-primary'}`}>{txn.category}</span></td>
+                      <td><span className={`category-chip ${getCategoryClass(txn.category_name)}`}>{txn.category_name}</span></td>
                       <td className="text-on-surface-variant">{txn.date}</td>
                       <td className="text-right text-tertiary">-Rp{txn.amount.toLocaleString('id-ID')}</td>
                     </tr>
@@ -282,9 +303,9 @@ export default function Dashboard() {
               </p>
             ) : (
               calculatedBudgets.map(b => (
-                <div key={b.id} className="budget-item" style={{ background: 'var(--surface-container-low)', padding: '16px', borderRadius: '8px', border: '1px solid var(--outline-variant)' }}>
+                <div key={b.budget_id} className="budget-item" style={{ background: 'var(--surface-container-low)', padding: '16px', borderRadius: '8px', border: '1px solid var(--outline-variant)' }}>
                   <div className="budget-header">
-                    <span className="budget-label">{b.name.toUpperCase()}</span>
+                    <span className="budget-label">{b.category_name.toUpperCase()}</span>
                     <span className={`budget-amount ${b.warning ? 'text-tertiary' : ''}`}>
                       Rp{b.spent.toLocaleString('id-ID')} / Rp{b.limit.toLocaleString('id-ID')}
                     </span>
@@ -293,7 +314,7 @@ export default function Dashboard() {
                     <div className={`progress-fill ${b.warning ? 'bg-tertiary' : 'bg-secondary'}`} style={{ width: `${Math.min(b.percentage, 100)}%` }} />
                   </div>
                   <div className="budget-header" style={{ marginTop: 8 }}>
-                    <span className="text-on-surface-variant" style={{ fontSize: 10 }}>{b.period.toUpperCase()}</span>
+                    <span className="text-on-surface-variant" style={{ fontSize: 10 }}>{b.type.toUpperCase()}</span>
                     <span className={b.statusClass} style={{ fontSize: 11, fontWeight: 600 }}>{b.status}</span>
                   </div>
                 </div>
@@ -314,7 +335,7 @@ export default function Dashboard() {
           <div className="bar-chart">
             {spendingData.map((v, i) => (
               <div key={i} className="bar-item">
-                <div className={`bar ${i === currentMonth ? 'bar-active' : ''}`} style={{ height: `${v}%` }} />
+                <div className={`bar ${i === now.getMonth() ? 'bar-active' : ''}`} style={{ height: `${v}%` }} />
               </div>
             ))}
           </div>

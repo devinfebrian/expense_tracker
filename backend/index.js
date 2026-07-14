@@ -5,6 +5,10 @@ import cors from 'cors';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import authRoutes from './routes/auth.js';
+import categoryRoutes from './routes/categories.js';
+import budgetRoutes from './routes/budgets.js';
+import transactionRoutes from './routes/transactions.js';
+import Category from './models/Category.js';
 
 if (!process.env.MONGODB_URI) {
   console.error('MONGODB_URI is not set. Configure backend/.env (see backend/.env.example).');
@@ -38,6 +42,9 @@ app.get('/api/health', (req, res) => {
 });
 
 app.use('/api/auth', authRoutes);
+app.use('/api/categories', categoryRoutes);
+app.use('/api/budgets', budgetRoutes);
+app.use('/api/transactions', transactionRoutes);
 
 app.use((req, res) => {
   res.status(404).json({
@@ -51,9 +58,31 @@ app.use((err, req, res, next) => { // eslint-disable-line no-unused-vars
   res.status(500).json({ status: 'error', message: 'Internal server error' });
 });
 
+const seedCategories = async () => {
+  const defaultCategories = [
+    '🍚 Food & Drinks',
+    '🚌 Transportation',
+    '📚 Education',
+    '🏠 Living Expenses',
+    '🎉 Personal & Entertainment'
+  ];
+  try {
+    for (const name of defaultCategories) {
+      const exists = await Category.findOne({ category_name: name });
+      if (!exists) {
+        await Category.create({ category_name: name });
+        console.log(`Seeded category: ${name}`);
+      }
+    }
+  } catch (error) {
+    console.error('Failed to seed categories:', error);
+  }
+};
+
 mongoose.connect(process.env.MONGODB_URI)
-  .then(() => {
+  .then(async () => {
     console.log('Connected to MongoDB');
+    await seedCategories();
     app.listen(PORT, () => {
       console.log(`Server is listening on http://localhost:${PORT}`);
     });

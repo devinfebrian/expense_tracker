@@ -1,51 +1,59 @@
-import { useState, useEffect } from 'react';
+/* eslint-disable react-hooks/set-state-in-effect */
+import { useState, useEffect, useCallback } from 'react';
 import Layout from '../components/Layout';
-import { getTransactions, saveTransactions } from '../utils/storage.js';
+import api from '../api/axios.js';
 
 export default function Transactions() {
   const [transactions, setTransactions] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [filterPeriod, setFilterPeriod] = useState('all');
   const [filterCat, setFilterCat] = useState('all');
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState({
     merchant: '',
-    category: 'Food',
+    category_id: '',
     amount: '',
     date: new Date().toISOString().split('T')[0],
     notes: ''
   });
-  const [summary, setSummary] = useState({ total: 0, count: 0 });
-  const categories = ['Food', 'Transport', 'Shopping', 'Bills', 'Entertainment', 'Housing', 'Others'];
 
   const getCategoryClass = (cat) => {
-    const c = cat.toLowerCase();
-    if (c === 'food') return 'bg-secondary-container text-on-secondary-fixed-variant';
-    if (c === 'housing') return 'bg-tertiary-fixed text-on-tertiary-fixed-variant';
+    const c = cat?.toLowerCase() || '';
+    if (c.includes('food') || c.includes('drinks')) return 'bg-secondary-container text-on-secondary-fixed-variant';
+    if (c.includes('living') || c.includes('rent') || c.includes('housing') || c.includes('dorm')) return 'bg-tertiary-fixed text-on-tertiary-fixed-variant';
     return 'surface-container-highest text-primary';
   };
 
   const getCategoryIcon = (cat) => {
-    const c = cat.toLowerCase();
-    if (c === 'food') return 'restaurant';
-    if (c === 'transport') return 'directions_car';
-    if (c === 'shopping') return 'shopping_bag';
-    if (c === 'bills') return 'electric_bolt';
-    if (c === 'housing') return 'home';
-    if (c === 'entertainment') return 'movie';
+    const c = cat?.toLowerCase() || '';
+    if (c.includes('food') || c.includes('drinks') || c.includes('meals')) return 'restaurant';
+    if (c.includes('transport') || c.includes('taxi') || c.includes('bus') || c.includes('car')) return 'directions_car';
+    if (c.includes('education') || c.includes('books') || c.includes('school')) return 'school';
+    if (c.includes('living') || c.includes('rent') || c.includes('dorm') || c.includes('housing')) return 'home';
+    if (c.includes('personal') || c.includes('entertainment') || c.includes('shopping') || c.includes('movie') || c.includes('games')) return 'celebration';
     return 'account_balance_wallet';
   };
 
-  const loadTxns = () => {
-    setTransactions(getTransactions());
-  };
-
-  useEffect(() => {
-    loadTxns();
+  const loadData = useCallback(async () => {
+    try {
+      const [catRes, txRes] = await Promise.all([
+        api.get('/categories'),
+        api.get('/transactions')
+      ]);
+      setCategories(catRes.data.data.categories);
+      setTransactions(txRes.data.data.transactions);
+    } catch (err) {
+      console.error('Failed to load transaction data:', err);
+    }
   }, []);
 
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
   const filtered = transactions.filter(t => {
-    if (filterCat !== 'all' && t.category !== filterCat) return false;
+    if (filterCat !== 'all' && t.category_id !== filterCat) return false;
     if (filterPeriod === 'all') return true;
     const d = new Date(t.date);
     const now = new Date();
@@ -69,18 +77,16 @@ export default function Transactions() {
     return true;
   });
 
-  useEffect(() => {
-    setSummary({
-      total: filtered.reduce((s, t) => s + t.amount, 0),
-      count: filtered.length
-    });
-  }, [filtered]);
+  // Calculate summary on-the-fly during render to avoid synchronous state-updates in effects
+  const total = filtered.reduce((s, t) => s + t.amount, 0);
+  const count = filtered.length;
+  const average = count > 0 ? Math.round(total / count) : 0;
 
   const openAdd = () => {
     setEditing(null);
     setForm({
       merchant: '',
-      category: 'Food',
+      category_id: categories[0]?.category_id || '',
       amount: '',
       date: new Date().toISOString().split('T')[0],
       notes: ''
@@ -92,7 +98,7 @@ export default function Transactions() {
     setEditing(t);
     setForm({
       merchant: t.merchant,
-      category: t.category,
+      category_id: t.category_id,
       amount: t.amount.toString(),
       date: t.date,
       notes: t.notes || ''
@@ -100,50 +106,45 @@ export default function Transactions() {
     setShowModal(true);
   };
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
     const amountVal = parseFloat(form.amount);
     
-    let updatedTxns;
-    if (editing) {
-      updatedTxns = transactions.map(t => 
-        t.id === editing.id 
-          ? { 
-              ...t, 
-              merchant: form.merchant, 
-              category: form.category, 
-              amount: amountVal, 
-              date: form.date, 
-              notes: form.notes,
-              icon: getCategoryIcon(form.category),
-              categoryClass: getCategoryClass(form.category)
-            } 
-          : t
-      );
-    } else {
-      const newTxn = {
-        id: Date.now().toString(),
-        merchant: form.merchant,
-        category: form.category,
-        amount: amountVal,
-        date: form.date,
-        notes: form.notes,
-        icon: getCategoryIcon(form.category),
-        categoryClass: getCategoryClass(form.category)
-      };
-      updatedTxns = [newTxn, ...transactions];
+    try {
+      if (editing) {
+        await api.put(`/transactions/${editing.transaction_id}`, {
+          merchant: form.merchant,
+          category_id: form.category_id,
+          amount: amountVal,
+          date: form.date,
+          notes: form.notes
+        });
+      } else {
+        await api.post('/transactions', {
+          merchant: form.merchant,
+          category_id: form.category_id,
+          amount: amountVal,
+          date: form.date,
+          notes: form.notes
+        });
+      }
+      setShowModal(false);
+      loadData();
+    } catch (err) {
+      console.error('Failed to save transaction:', err);
+      alert(err.response?.data?.message || 'Failed to save transaction');
     }
-
-    saveTransactions(updatedTxns);
-    setTransactions(updatedTxns);
-    setShowModal(false);
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = async (transaction_id) => {
     if (window.confirm('Are you sure you want to delete this expense?')) {
-      const updatedTxns = transactions.filter(t => t.id !== id);
-      saveTransactions(updatedTxns);
-      setTransactions(updatedTxns);
+      try {
+        await api.delete(`/transactions/${transaction_id}`);
+        loadData();
+      } catch (err) {
+        console.error('Failed to delete transaction:', err);
+        alert('Failed to delete transaction');
+      }
     }
   };
 
@@ -184,22 +185,22 @@ export default function Transactions() {
           onChange={e => setFilterCat(e.target.value)}
         >
           <option value="all">All Categories</option>
-          {categories.map(c => <option key={c} value={c}>{c}</option>)}
+          {categories.map(c => <option key={c.category_id} value={c.category_id}>{c.category_name}</option>)}
         </select>
       </div>
 
       <div className="txn-summary">
         <div className="summary-card mini">
           <p className="summary-label">TOTAL EXPENSES</p>
-          <h3 className="summary-value">Rp{summary.total.toLocaleString('id-ID')}</h3>
+          <h3 className="summary-value">Rp{total.toLocaleString('id-ID')}</h3>
         </div>
         <div className="summary-card mini">
           <p className="summary-label">TRANSACTIONS</p>
-          <h3 className="summary-value">{summary.count}</h3>
+          <h3 className="summary-value">{count}</h3>
         </div>
         <div className="summary-card mini">
           <p className="summary-label">AVERAGE</p>
-          <h3 className="summary-value">Rp{summary.count > 0 ? Math.round(summary.total / summary.count).toLocaleString('id-ID') : 0}</h3>
+          <h3 className="summary-value">Rp{average.toLocaleString('id-ID')}</h3>
         </div>
       </div>
 
@@ -224,11 +225,11 @@ export default function Transactions() {
                 </tr>
               ) : (
                 filtered.map(txn => (
-                  <tr key={txn.id}>
+                  <tr key={txn.transaction_id}>
                     <td>
                       <div className="merchant-cell">
                         <div className="merchant-icon">
-                          <span className="material-symbols-outlined">{txn.icon}</span>
+                          <span className="material-symbols-outlined">{getCategoryIcon(txn.category_name)}</span>
                         </div>
                         <div>
                           <span>{txn.merchant}</span>
@@ -236,14 +237,14 @@ export default function Transactions() {
                         </div>
                       </div>
                     </td>
-                    <td><span className={`category-chip ${txn.categoryClass || getCategoryClass(txn.category)}`}>{txn.category}</span></td>
+                    <td><span className={`category-chip ${getCategoryClass(txn.category_name)}`}>{txn.category_name}</span></td>
                     <td className="text-on-surface-variant">{txn.date}</td>
                     <td className="text-right text-tertiary">-Rp{txn.amount.toLocaleString('id-ID')}</td>
                     <td className="text-center">
                       <button className="icon-btn" onClick={() => openEdit(txn)} style={{ marginRight: '6px' }}>
                         <span className="material-symbols-outlined">edit</span>
                       </button>
-                      <button className="icon-btn text-tertiary" onClick={() => handleDelete(txn.id)}>
+                      <button className="icon-btn text-tertiary" onClick={() => handleDelete(txn.transaction_id)}>
                         <span className="material-symbols-outlined">delete</span>
                       </button>
                     </td>
@@ -279,10 +280,10 @@ export default function Transactions() {
                   <label className="form-label">Category</label>
                   <select 
                     className="form-input" 
-                    value={form.category} 
-                    onChange={e => setForm(f => ({ ...f, category: e.target.value }))}
+                    value={form.category_id} 
+                    onChange={e => setForm(f => ({ ...f, category_id: e.target.value }))}
                   >
-                    {categories.map(c => <option key={c} value={c}>{c}</option>)}
+                    {categories.map(c => <option key={c.category_id} value={c.category_id}>{c.category_name}</option>)}
                   </select>
                 </div>
               </div>
