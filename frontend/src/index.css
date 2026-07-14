@@ -876,7 +876,12 @@ img {
 }
 
 .txn-summary .summary-card.mini {
-  padding: var(--space-md)
+  padding: var(--space-md);
+  text-align: right
+}
+
+.txn-summary .summary-card.mini .summary-label {
+  text-align: left
 }
 
 .table-card {
