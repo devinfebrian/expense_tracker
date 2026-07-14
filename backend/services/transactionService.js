@@ -1,13 +1,17 @@
 import Transaction from '../models/Transaction.js';
 import Category from '../models/Category.js';
 
+let catMapCache = null;
+let catMapAt = 0;
 const getCategoryMap = async () => {
+  if (catMapCache && Date.now() - catMapAt < 60_000) return catMapCache;
   const categories = await Category.find();
-  const catMap = {};
+  catMapCache = {};
   categories.forEach(c => {
-    catMap[c.category_id] = c.category_name;
+    catMapCache[c.category_id] = c.category_name;
   });
-  return catMap;
+  catMapAt = Date.now();
+  return catMapCache;
 };
 
 export const fetchTransactionsByUserId = async (user_id) => {

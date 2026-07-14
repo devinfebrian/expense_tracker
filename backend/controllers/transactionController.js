@@ -1,5 +1,16 @@
 import * as transactionService from '../services/transactionService.js';
 
+const sendError = (res, err) => {
+  const clientErrors = new Set(['CastError', 'ValidationError']);
+  const status = err.statusCode || (clientErrors.has(err.name) ? 400 : 500);
+  const expose = err.statusCode || clientErrors.has(err.name);
+  if (!expose) console.error('Transaction controller error:', err);
+  res.status(status).json({
+    status: 'error',
+    message: expose ? err.message : 'Internal server error',
+  });
+};
+
 export const getTransactions = async (req, res) => {
   try {
     const transactions = await transactionService.fetchTransactionsByUserId(req.user.user_id);
@@ -8,7 +19,7 @@ export const getTransactions = async (req, res) => {
       data: transactions,
     });
   } catch (err) {
-    res.status(500).json({ status: 'error', message: err.message || 'Internal server error' });
+    sendError(res, err);
   }
 };
 
@@ -20,10 +31,7 @@ export const createTransaction = async (req, res) => {
       data: result,
     });
   } catch (err) {
-    res.status(err.statusCode || 500).json({
-      status: 'error',
-      message: err.message || 'Internal server error',
-    });
+    sendError(res, err);
   }
 };
 
@@ -35,10 +43,7 @@ export const updateTransaction = async (req, res) => {
       data: result,
     });
   } catch (err) {
-    res.status(err.statusCode || 500).json({
-      status: 'error',
-      message: err.message || 'Internal server error',
-    });
+    sendError(res, err);
   }
 };
 
@@ -50,9 +55,6 @@ export const deleteTransaction = async (req, res) => {
       message: 'Transaction deleted successfully',
     });
   } catch (err) {
-    res.status(err.statusCode || 500).json({
-      status: 'error',
-      message: err.message || 'Internal server error',
-    });
+    sendError(res, err);
   }
 };
