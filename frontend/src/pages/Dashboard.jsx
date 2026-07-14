@@ -7,6 +7,7 @@ import TransactionModal from '../components/TransactionModal';
 import { useTransactionStore } from '../store/useTransactionStore';
 import { useBudgetStore } from '../store/useBudgetStore';
 import { useAuthStore } from '../store/useAuthStore';
+import { getPeriodRange } from '../utils/period';
 
 export default function Dashboard() {
   const user = useAuthStore(state => state.user);
@@ -124,27 +125,17 @@ loadBudgets(user, 'current');
   ];
 
   // 4. Budget Health calculations
-  const getPeriodStart = (period) => {
-    if (period === 'daily') {
-      return new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    } else if (period === 'weekly') {
-      const day = now.getDay();
-      const diff = now.getDate() - day + (day === 0 ? -6 : 1);
-      return new Date(now.getFullYear(), now.getMonth(), diff);
-    } else {
-      return new Date(now.getFullYear(), now.getMonth(), 1);
-    }
-  };
-
   const calculatedBudgets = budgets.map(b => {
-    const startOfPeriod = getPeriodStart(b.type || b.period);
-    const categoryTxns = transactions.filter(t => 
-      t.category.toLowerCase() === b.category_name.toLowerCase() && 
-      new Date(t.date) >= startOfPeriod
-    );
+    const range = getPeriodRange(b.period);
+    const categoryTxns = transactions.filter(t => {
+      if (t.category_id !== b.category_id) return false;
+      if (!range) return false;
+      const d = new Date(t.date);
+      return d >= range.start && d < range.end;
+    });
     const spent = categoryTxns.reduce((sum, t) => sum + t.amount, 0);
     const percentage = b.limit > 0 ? Math.round((spent / b.limit) * 100) : 0;
-    
+
     let status = 'ON TRACK';
     let statusClass = 'text-secondary';
     let warning = false;
