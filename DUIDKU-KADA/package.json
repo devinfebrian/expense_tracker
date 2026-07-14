@@ -1,9 +1,0 @@
-{
-  "name": "duidku-dashboard",
-  "version": "1.0.0",
-  "description": "DUIDKU - Expense Tracker",
-  "scripts": {
-    "backend": "node backend/server.js",
-    "frontend": "cd frontend && npm run dev"
-  }
-}
