@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
-import { getTransactions, saveTransactions } from '../utils/storage.js';
+import api from '../api/axios.js';
 
 export default function Transactions() {
   const [transactions, setTransactions] = useState([]);
@@ -10,34 +10,52 @@ export default function Transactions() {
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState({
     merchant: '',
-    category: 'Food',
+    category: '🍚 Food & Drinks',
     amount: '',
     date: new Date().toISOString().split('T')[0],
     notes: ''
   });
   const [summary, setSummary] = useState({ total: 0, count: 0 });
-  const categories = ['Food', 'Transport', 'Shopping', 'Bills', 'Entertainment', 'Housing', 'Others'];
+  const categories = [
+    '🍚 Food & Drinks',
+    '🚌 Transportation',
+    '📚 Education',
+    '🏠 Living Expenses',
+    '🎉 Personal & Entertainment'
+  ];
 
   const getCategoryClass = (cat) => {
     const c = cat.toLowerCase();
-    if (c === 'food') return 'bg-secondary-container text-on-secondary-fixed-variant';
-    if (c === 'housing') return 'bg-tertiary-fixed text-on-tertiary-fixed-variant';
+    if (c.includes('food')) return 'bg-secondary-container text-on-secondary-fixed-variant';
+    if (c.includes('living')) return 'bg-tertiary-fixed text-on-tertiary-fixed-variant';
+    if (c.includes('education')) return 'bg-primary-container text-on-primary-container';
+    if (c.includes('transport')) return 'bg-surface-variant text-on-surface-variant';
     return 'surface-container-highest text-primary';
   };
 
   const getCategoryIcon = (cat) => {
     const c = cat.toLowerCase();
-    if (c === 'food') return 'restaurant';
-    if (c === 'transport') return 'directions_car';
-    if (c === 'shopping') return 'shopping_bag';
-    if (c === 'bills') return 'electric_bolt';
-    if (c === 'housing') return 'home';
-    if (c === 'entertainment') return 'movie';
+    if (c.includes('food')) return 'restaurant';
+    if (c.includes('transport')) return 'directions_car';
+    if (c.includes('education')) return 'school';
+    if (c.includes('living')) return 'home';
+    if (c.includes('personal') || c.includes('entertainment')) return 'celebration';
     return 'account_balance_wallet';
   };
 
-  const loadTxns = () => {
-    setTransactions(getTransactions());
+  const loadTxns = async () => {
+    try {
+      const res = await api.get('/transactions');
+      // Format backend response to include local UI fields if needed
+      const mapped = (res.data.data || []).map(t => ({
+        ...t,
+        icon: getCategoryIcon(t.category),
+        categoryClass: getCategoryClass(t.category)
+      }));
+      setTransactions(mapped);
+    } catch (err) {
+      console.error('Error fetching transactions:', err);
+    }
   };
 
   useEffect(() => {
@@ -80,7 +98,7 @@ export default function Transactions() {
     setEditing(null);
     setForm({
       merchant: '',
-      category: 'Food',
+      category: '🍚 Food & Drinks',
       amount: '',
       date: new Date().toISOString().split('T')[0],
       notes: ''
@@ -100,50 +118,58 @@ export default function Transactions() {
     setShowModal(true);
   };
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
     const amountVal = parseFloat(form.amount);
     
-    let updatedTxns;
-    if (editing) {
-      updatedTxns = transactions.map(t => 
-        t.id === editing.id 
-          ? { 
-              ...t, 
-              merchant: form.merchant, 
-              category: form.category, 
-              amount: amountVal, 
-              date: form.date, 
-              notes: form.notes,
-              icon: getCategoryIcon(form.category),
-              categoryClass: getCategoryClass(form.category)
-            } 
-          : t
-      );
-    } else {
-      const newTxn = {
-        id: Date.now().toString(),
-        merchant: form.merchant,
-        category: form.category,
-        amount: amountVal,
-        date: form.date,
-        notes: form.notes,
-        icon: getCategoryIcon(form.category),
-        categoryClass: getCategoryClass(form.category)
-      };
-      updatedTxns = [newTxn, ...transactions];
+    try {
+      if (editing) {
+        const res = await api.put(`/transactions/${editing.id}`, {
+          merchant: form.merchant,
+          category: form.category,
+          amount: amountVal,
+          date: form.date,
+          notes: form.notes
+        });
+        const updated = res.data.data;
+        const mappedUpdated = {
+          ...updated,
+          icon: getCategoryIcon(updated.category),
+          categoryClass: getCategoryClass(updated.category)
+        };
+        setTransactions(txns => txns.map(t => t.id === editing.id ? mappedUpdated : t));
+      } else {
+        const res = await api.post('/transactions', {
+          merchant: form.merchant,
+          category: form.category,
+          amount: amountVal,
+          date: form.date,
+          notes: form.notes
+        });
+        const created = res.data.data;
+        const mappedCreated = {
+          ...created,
+          icon: getCategoryIcon(created.category),
+          categoryClass: getCategoryClass(created.category)
+        };
+        setTransactions(txns => [mappedCreated, ...txns]);
+      }
+      setShowModal(false);
+    } catch (err) {
+      console.error('Error saving transaction:', err);
+      alert(err.response?.data?.message || 'Failed to save transaction');
     }
-
-    saveTransactions(updatedTxns);
-    setTransactions(updatedTxns);
-    setShowModal(false);
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this expense?')) {
-      const updatedTxns = transactions.filter(t => t.id !== id);
-      saveTransactions(updatedTxns);
-      setTransactions(updatedTxns);
+      try {
+        await api.delete(`/transactions/${id}`);
+        setTransactions(txns => txns.filter(t => t.id !== id));
+      } catch (err) {
+        console.error('Error deleting transaction:', err);
+        alert(err.response?.data?.message || 'Failed to delete transaction');
+      }
     }
   };
 
