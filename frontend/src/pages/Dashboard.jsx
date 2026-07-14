@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Layout from '../components/Layout';
-import { fetchTransactions } from '../api/transactions.js';
-import { getBudgets } from '../utils/storage.js';
+import api from '../api/axios.js';
 
 export default function Dashboard() {
   const [transactions, setTransactions] = useState([]);
@@ -10,17 +9,21 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const load = async () => {
+    const fetchData = async () => {
       try {
-        const data = await fetchTransactions({ period: 'all' });
-        setTransactions(data);
+        const [txnRes, budgetRes] = await Promise.all([
+          api.get('/transactions'),
+          api.get('/budgets')
+        ]);
+        setTransactions(txnRes.data.data || []);
+        setBudgets(budgetRes.data.data || []);
       } catch (err) {
-        console.error('Failed to load transactions:', err);
+        console.error('Error fetching dashboard data:', err);
+      } finally {
+        setLoading(false);
       }
-      setBudgets(getBudgets());
-      setLoading(false);
     };
-    load();
+    fetchData();
   }, []);
 
   // 1. Dynamic summary calculations
@@ -109,10 +112,11 @@ export default function Dashboard() {
 
   const getBudgetIcon = (name) => {
     const n = name.toLowerCase();
-    if (n.includes('housing') || n.includes('rent')) return 'home';
+    if (n.includes('housing') || n.includes('rent') || n.includes('living')) return 'home';
     if (n.includes('dining') || n.includes('restaurant') || n.includes('food') || n.includes('grocery') || n.includes('groceries')) return 'restaurant';
     if (n.includes('transport') || n.includes('car')) return 'directions_car';
-    if (n.includes('entertainment') || n.includes('movie') || n.includes('netflix')) return 'movie';
+    if (n.includes('entertainment') || n.includes('movie') || n.includes('netflix') || n.includes('personal')) return 'movie';
+    if (n.includes('education')) return 'school';
     return 'account_balance_wallet';
   };
 
@@ -266,7 +270,7 @@ export default function Dashboard() {
                           <span>{txn.merchant}</span>
                         </div>
                       </td>
-                      <td><span className={`category-chip ${txn.categoryClass || 'surface-container-highest text-primary'}`}>{txn.category}</span></td>
+                      <td><span className="category-chip surface-container-highest text-primary">{txn.category}</span></td>
                       <td className="text-on-surface-variant">{txn.date}</td>
                       <td className="text-right text-tertiary">-Rp{txn.amount.toLocaleString('id-ID')}</td>
                     </tr>

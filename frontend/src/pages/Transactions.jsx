@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import Layout from '../components/Layout';
-import { fetchTransactions, createTransaction, updateTransaction, deleteTransaction } from '../api/transactions.js';
+import api from '../api/axios.js';
 
 export default function Transactions() {
   const [transactions, setTransactions] = useState([]);
@@ -16,46 +16,66 @@ export default function Transactions() {
   const [loading, setLoading] = useState(true); // eslint-disable-line no-unused-vars
   const [form, setForm] = useState({
     merchant: '',
-    category: 'Food',
+    category: '🍚 Food & Drinks',
     amount: '',
     date: new Date().toISOString().split('T')[0],
     notes: ''
   });
-  const categories = ['Food', 'Transport', 'Shopping', 'Bills', 'Entertainment', 'Housing', 'Others'];
+
+  const categories = [
+    '🍚 Food & Drinks',
+    '🚌 Transportation',
+    '📚 Education',
+    '🏠 Living Expenses',
+    '🎉 Personal & Entertainment'
+  ];
 
   const getCategoryClass = (cat) => {
-    const c = cat.toLowerCase();
-    if (c === 'food') return 'bg-secondary-container text-on-secondary-fixed-variant';
-    if (c === 'housing') return 'bg-tertiary-fixed text-on-tertiary-fixed-variant';
     return 'surface-container-highest text-primary';
   };
 
+  const getCategoryIcon = (cat) => {
+    const c = cat.toLowerCase();
+    if (c.includes('food')) return 'restaurant';
+    if (c.includes('transport')) return 'directions_car';
+    if (c.includes('education')) return 'school';
+    if (c.includes('living')) return 'home';
+    if (c.includes('personal') || c.includes('entertainment')) return 'celebration';
+    return 'account_balance_wallet';
+  };
 
-  const loadTxns = async (search) => {
+  const loadTxns = async () => {
     try {
-      setLoading(true);
-      const params = { period: 'all' };
-      if (search) params.search = search;
-      const data = await fetchTransactions(params);
-      setTransactions(data);
+      const res = await api.get('/transactions');
+      const mapped = (res.data.data || []).map(t => ({
+        ...t,
+        icon: getCategoryIcon(t.category),
+        categoryClass: getCategoryClass(t.category)
+      }));
+      setTransactions(mapped);
     } catch (err) {
-      console.error('Failed to load transactions:', err);
-    } finally {
-      setLoading(false);
+      console.error('Error fetching transactions:', err);
     }
   };
 
-  useEffect(() => { loadTxns(); }, []); // eslint-disable-line react-hooks/set-state-in-effect
-
   useEffect(() => {
     const timer = setTimeout(() => {
-      loadTxns(searchQuery);
+      loadTxns();
     }, 400);
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
   const filtered = transactions.filter(t => {
     if (filterCat !== 'all' && t.category !== filterCat) return false;
+    
+    // Search query matching merchant or notes
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      const merchantMatch = t.merchant && t.merchant.toLowerCase().includes(q);
+      const notesMatch = t.notes && t.notes.toLowerCase().includes(q);
+      if (!merchantMatch && !notesMatch) return false;
+    }
+
     if (filterPeriod === 'all') return true;
     const d = new Date(t.date);
     const now = new Date();
@@ -109,7 +129,7 @@ export default function Transactions() {
     setEditing(null);
     setForm({
       merchant: '',
-      category: 'Food',
+      category: '🍚 Food & Drinks',
       amount: '',
       date: new Date().toISOString().split('T')[0],
       notes: ''
@@ -132,29 +152,30 @@ export default function Transactions() {
   const handleSave = async (e) => {
     e.preventDefault();
     const amountVal = parseFloat(form.amount);
-
+    
     try {
       if (editing) {
-        await updateTransaction(editing.id, {
+        await api.put(`/transactions/${editing.id}`, {
           merchant: form.merchant,
           category: form.category,
           amount: amountVal,
           date: form.date,
-          notes: form.notes,
+          notes: form.notes
         });
       } else {
-        await createTransaction({
+        await api.post('/transactions', {
           merchant: form.merchant,
           category: form.category,
           amount: amountVal,
           date: form.date,
-          notes: form.notes,
+          notes: form.notes
         });
       }
       await loadTxns();
       setShowModal(false);
     } catch (err) {
-      console.error('Failed to save transaction:', err);
+      console.error('Error saving transaction:', err);
+      alert(err.response?.data?.message || 'Failed to save transaction');
     }
   };
 
@@ -169,10 +190,11 @@ export default function Transactions() {
   const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this expense?')) {
       try {
-        await deleteTransaction(id);
+        await api.delete(`/transactions/${id}`);
         await loadTxns();
       } catch (err) {
-        console.error('Failed to delete transaction:', err);
+        console.error('Error deleting transaction:', err);
+        alert(err.response?.data?.message || 'Failed to delete transaction');
       }
     }
   };
@@ -358,11 +380,11 @@ export default function Transactions() {
                 placeholder="#"
                 onKeyDown={e => {
                   if (e.key === 'Enter') {
-                    const val = parseInt(e.target.value, 10);
-                    if (!isNaN(val) && val >= 1 && val <= totalPages) {
-                      setCurrentPage(val);
-                      e.target.value = '';
-                    }
+                     const val = parseInt(e.target.value, 10);
+                     if (!isNaN(val) && val >= 1 && val <= totalPages) {
+                       setCurrentPage(val);
+                       e.target.value = '';
+                     }
                   }
                 }}
                 style={{ width: '48px', textAlign: 'center', padding: '4px', fontSize: '13px' }}

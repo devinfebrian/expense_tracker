@@ -5,7 +5,6 @@ import cors from 'cors';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import authRoutes from './routes/auth.js';
-import transactionRoutes from './routes/transactions.js';
 
 if (!process.env.MONGODB_URI) {
   console.error('MONGODB_URI is not set. Configure backend/.env (see backend/.env.example).');
@@ -39,7 +38,6 @@ app.get('/api/health', (req, res) => {
 });
 
 app.use('/api/auth', authRoutes);
-app.use('/api/transactions', transactionRoutes);
 
 app.use((req, res) => {
   res.status(404).json({

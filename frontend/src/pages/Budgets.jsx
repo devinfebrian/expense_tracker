@@ -1,23 +1,31 @@
 import { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
-import { getBudgets, saveBudgets, getTransactions, getAdjustments, saveAdjustments } from '../utils/storage.js';
+import api from '../api/axios.js';
+import { getAdjustments, saveAdjustments } from '../utils/storage.js';
 
 export default function Budgets() {
   const [budgets, setBudgets] = useState([]);
   const [adjustments, setAdjustments] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState(null);
-  const [form, setForm] = useState({ name: 'Food', limit: '', period: 'monthly' });
+  const [form, setForm] = useState({ name: '🍚 Food & Drinks', limit: '', period: 'monthly' });
   const [error, setError] = useState('');
 
-  const categories = ['Food', 'Transport', 'Shopping', 'Bills', 'Entertainment', 'Housing', 'Others'];
+  const categories = [
+    '🍚 Food & Drinks',
+    '🚌 Transportation',
+    '📚 Education',
+    '🏠 Living Expenses',
+    '🎉 Personal & Entertainment'
+  ];
 
   const getBudgetIcon = (name) => {
     const n = name.toLowerCase();
-    if (n.includes('housing') || n.includes('rent')) return 'home';
+    if (n.includes('housing') || n.includes('rent') || n.includes('living')) return 'home';
     if (n.includes('dining') || n.includes('restaurant') || n.includes('food') || n.includes('grocery') || n.includes('groceries')) return 'restaurant';
     if (n.includes('transport') || n.includes('car')) return 'directions_car';
     if (n.includes('entertainment') || n.includes('movie') || n.includes('netflix')) return 'movie';
+    if (n.includes('education')) return 'school';
     return 'account_balance_wallet';
   };
 
@@ -34,43 +42,51 @@ export default function Budgets() {
     }
   };
 
-  const loadData = () => {
-    const rawBudgets = getBudgets();
-    const transactions = getTransactions();
-    const rawAdjustments = getAdjustments();
+  const loadData = async () => {
+    try {
+      const [budgetRes, txnRes] = await Promise.all([
+        api.get('/budgets'),
+        api.get('/transactions')
+      ]);
+      const rawBudgets = budgetRes.data.data || [];
+      const transactions = txnRes.data.data || [];
+      const rawAdjustments = getAdjustments();
 
-    // Map spent amounts and warning states on the fly from actual transactions
-    const calculatedBudgets = rawBudgets.map(b => {
-      const startOfPeriod = getPeriodStart(b.period);
-      const categoryTxns = transactions.filter(t => 
-        t.category.toLowerCase() === b.name.toLowerCase() && 
-        new Date(t.date) >= startOfPeriod
-      );
-      const spent = categoryTxns.reduce((sum, t) => sum + t.amount, 0);
-      const percentage = b.limit > 0 ? Math.round((spent / b.limit) * 100) : 0;
-      
-      let status = 'ON TRACK';
-      let statusClass = 'text-secondary';
-      if (spent > b.limit) {
-        status = 'EXCEEDED';
-        statusClass = 'text-error';
-      } else if (spent === b.limit) {
-        status = 'REACHED';
-        statusClass = 'text-on-primary-fixed-variant';
-      }
+      // Map spent amounts and warning states on the fly from actual transactions
+      const calculatedBudgets = rawBudgets.map(b => {
+        const startOfPeriod = getPeriodStart(b.period);
+        const categoryTxns = transactions.filter(t => 
+          t.category.toLowerCase() === b.name.toLowerCase() && 
+          new Date(t.date) >= startOfPeriod
+        );
+        const spent = categoryTxns.reduce((sum, t) => sum + t.amount, 0);
+        const percentage = b.limit > 0 ? Math.round((spent / b.limit) * 100) : 0;
+        
+        let status = 'ON TRACK';
+        let statusClass = 'text-secondary';
+        if (spent > b.limit) {
+          status = 'EXCEEDED';
+          statusClass = 'text-error';
+        } else if (spent === b.limit) {
+          status = 'REACHED';
+          statusClass = 'text-on-primary-fixed-variant';
+        }
 
-      return {
-        ...b,
-        spent,
-        percentage,
-        status,
-        statusClass,
-        icon: b.icon || getBudgetIcon(b.name)
-      };
-    });
+        return {
+          ...b,
+          spent,
+          percentage,
+          status,
+          statusClass,
+          icon: b.icon || getBudgetIcon(b.name)
+        };
+      });
 
-    setBudgets(calculatedBudgets);
-    setAdjustments(rawAdjustments);
+      setBudgets(calculatedBudgets);
+      setAdjustments(rawAdjustments);
+    } catch (err) {
+      console.error('Error loading budget data:', err);
+    }
   };
 
   useEffect(() => {
@@ -80,7 +96,7 @@ export default function Budgets() {
   const openAdd = () => {
     setEditing(null);
     setError('');
-    setForm({ name: 'Food', limit: '', period: 'monthly' });
+    setForm({ name: '🍚 Food & Drinks', limit: '', period: 'monthly' });
     setShowModal(true);
   };
 
@@ -91,95 +107,96 @@ export default function Budgets() {
     setShowModal(true);
   };
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
     setError('');
     const newLimit = parseFloat(form.limit);
-    const rawBudgets = getBudgets();
-
-    let updatedBudgets;
     const todayStr = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
-    if (editing) {
-      const prevLimit = editing.limit;
-      const limitDiff = newLimit - prevLimit;
-      
-      updatedBudgets = rawBudgets.map(b => 
-        b.id === editing.id 
-          ? { ...b, name: form.name, limit: newLimit, period: form.period, icon: getBudgetIcon(form.name) } 
-          : b
-      );
+    try {
+      if (editing) {
+        const prevLimit = editing.limit;
+        const limitDiff = newLimit - prevLimit;
+        
+        await api.put(`/budgets/${editing.id}`, {
+          name: form.name,
+          limit: newLimit,
+          period: form.period
+        });
 
-      // Log the adjustment change
-      if (limitDiff !== 0) {
+        // Log the adjustment change
+        if (limitDiff !== 0) {
+          const newAdjustment = {
+            date: todayStr,
+            category: form.name,
+            previousLimit: prevLimit,
+            newLimit: newLimit,
+            change: limitDiff,
+            changeClass: limitDiff >= 0 ? 'text-secondary' : 'text-error'
+          };
+          const updatedAdjustments = [newAdjustment, ...adjustments];
+          saveAdjustments(updatedAdjustments);
+        }
+      } else {
+        // Check if budget for this category already exists
+        const exists = budgets.some(b => b.name.toLowerCase() === form.name.toLowerCase());
+        if (exists) {
+          setError(`A budget for "${form.name}" already exists. Please edit the existing one instead.`);
+          return;
+        }
+
+        await api.post('/budgets', {
+          name: form.name,
+          limit: newLimit,
+          period: form.period
+        });
+
+        // Log positive creation adjustment
         const newAdjustment = {
           date: todayStr,
           category: form.name,
-          previousLimit: prevLimit,
+          previousLimit: 0,
           newLimit: newLimit,
-          change: limitDiff,
-          changeClass: limitDiff >= 0 ? 'text-secondary' : 'text-error'
+          change: newLimit,
+          changeClass: 'text-secondary'
         };
         const updatedAdjustments = [newAdjustment, ...adjustments];
         saveAdjustments(updatedAdjustments);
       }
-    } else {
-      // Check if budget for this category already exists
-      const exists = rawBudgets.some(b => b.name.toLowerCase() === form.name.toLowerCase());
-      if (exists) {
-        setError(`A budget for "${form.name}" already exists. Please edit the existing one instead.`);
-        return;
-      }
 
-      const newBudget = {
-        id: Date.now().toString(),
-        name: form.name,
-        limit: newLimit,
-        period: form.period,
-        icon: getBudgetIcon(form.name)
-      };
-      updatedBudgets = [...rawBudgets, newBudget];
-
-      // Log positive creation adjustment
-      const newAdjustment = {
-        date: todayStr,
-        category: form.name,
-        previousLimit: 0,
-        newLimit: newLimit,
-        change: newLimit,
-        changeClass: 'text-secondary'
-      };
-      const updatedAdjustments = [newAdjustment, ...adjustments];
-      saveAdjustments(updatedAdjustments);
+      setShowModal(false);
+      loadData();
+    } catch (err) {
+      console.error('Error saving budget:', err);
+      setError(err.response?.data?.message || 'Failed to save budget');
     }
-
-    saveBudgets(updatedBudgets);
-    setShowModal(false);
-    loadData();
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this budget?')) {
-      const rawBudgets = getBudgets();
-      const target = rawBudgets.find(b => b.id === id);
-      const updatedBudgets = rawBudgets.filter(b => b.id !== id);
-      saveBudgets(updatedBudgets);
+      try {
+        const target = budgets.find(b => b.id === id);
+        await api.delete(`/budgets/${id}`);
 
-      if (target) {
-        const todayStr = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-        const newAdjustment = {
-          date: todayStr,
-          category: target.name,
-          previousLimit: target.limit,
-          newLimit: 0,
-          change: -target.limit,
-          changeClass: 'text-error'
-        };
-        const updatedAdjustments = [newAdjustment, ...adjustments];
-        saveAdjustments(updatedAdjustments);
+        if (target) {
+          const todayStr = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+          const newAdjustment = {
+            date: todayStr,
+            category: target.name,
+            previousLimit: target.limit,
+            newLimit: 0,
+            change: -target.limit,
+            changeClass: 'text-error'
+          };
+          const updatedAdjustments = [newAdjustment, ...adjustments];
+          saveAdjustments(updatedAdjustments);
+        }
+
+        loadData();
+      } catch (err) {
+        console.error('Error deleting budget:', err);
+        alert(err.response?.data?.message || 'Failed to delete budget');
       }
-
-      loadData();
     }
   };
 
