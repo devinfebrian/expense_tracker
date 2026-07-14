@@ -1,5 +1,16 @@
 import * as authService from '../services/authService.js';
 
+const sendError = (res, err) => {
+  const clientErrors = new Set(['CastError', 'ValidationError']);
+  const status = err.statusCode || (clientErrors.has(err.name) ? 400 : 500);
+  const expose = err.statusCode || clientErrors.has(err.name);
+  if (!expose) console.error('Auth controller error:', err);
+  res.status(status).json({
+    status: 'error',
+    message: expose ? err.message : 'Internal server error',
+  });
+};
+
 const COOKIE_OPTIONS = {
   httpOnly: true,
   sameSite: 'lax',
@@ -55,10 +66,7 @@ export const login = async (req, res) => {
       data: { user: attachUser(user) },
     });
   } catch (err) {
-    res.status(err.statusCode || 500).json({
-      status: 'error',
-      message: err.message || 'Internal server error',
-    });
+    sendError(res, err);
   }
 };
 
