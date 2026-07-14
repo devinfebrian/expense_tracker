@@ -1,0 +1,5 @@
+- [ ] Update Category, Transaction, and Budget models in backend/models
+- [ ] Update categories.js route to pull from Category collection
+- [ ] Update transactions.js and budgets.js routes to synchronize categories via category_id
+- [ ] Update backend index.js category seeder
+- [ ] Run verification checks

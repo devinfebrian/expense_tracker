@@ -1,25 +1,31 @@
 import mongoose from 'mongoose';
+import crypto from 'crypto';
 
 const transactionSchema = new mongoose.Schema({
+  transaction_id: {
+    type: String,
+    unique: true,
+    default: () => crypto.randomUUID(),
+  },
   user_id: {
     type: String,
     required: true,
     index: true,
   },
-  merchant: {
+  category_id: {
     type: String,
-    required: [true, 'Merchant name is required'],
-    trim: true,
-  },
-  category: {
-    type: String,
-    required: [true, 'Category name is required'],
-    trim: true,
+    required: [true, 'Category ID is required'],
+    index: true,
   },
   amount: {
     type: Number,
     required: [true, 'Amount is required'],
     min: [0, 'Amount cannot be negative'],
+  },
+  merchant: {
+    type: String,
+    required: [true, 'Merchant name is required'],
+    trim: true,
   },
   date: {
     type: String,

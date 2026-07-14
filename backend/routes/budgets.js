@@ -1,16 +1,40 @@
 import { Router } from 'express';
 import Budget from '../models/Budget.js';
+import Category from '../models/Category.js';
 import auth from '../middleware/auth.js';
 
 const router = Router();
+
+const getCategoryMap = async () => {
+  const categories = await Category.find();
+  const catMap = {};
+  categories.forEach(c => {
+    catMap[c.category_id] = c.category_name;
+  });
+  return catMap;
+};
 
 // GET /api/budgets
 router.get('/', auth, async (req, res) => {
   try {
     const budgets = await Budget.find({ user_id: req.user.user_id });
+    const catMap = await getCategoryMap();
+
+    const mapped = budgets.map(b => ({
+      budget_id: b.budget_id,
+      id: b.budget_id,
+      user_id: b.user_id,
+      category_id: b.category_id,
+      category_name: catMap[b.category_id] || 'Others',
+      name: catMap[b.category_id] || 'Others',
+      limit: b.limit,
+      type: b.type,
+      period: b.type
+    }));
+
     res.json({
       status: 'success',
-      data: budgets,
+      data: mapped,
     });
   } catch (err) {
     console.error('Fetch budgets error:', err);
@@ -23,35 +47,40 @@ router.post('/', auth, async (req, res) => {
   try {
     const { name, category_name, category_id, limit, period, type } = req.body;
 
-    let resolvedCategory = name || category_name;
-    if (!resolvedCategory && category_id) {
-      const categoryNames = [
-        '🍚 Food & Drinks',
-        '🚌 Transportation',
-        '📚 Education',
-        '🏠 Living Expenses',
-        '🎉 Personal & Entertainment'
-      ];
-      const idx = parseInt(category_id) - 1;
-      resolvedCategory = (idx >= 0 && idx < categoryNames.length) ? categoryNames[idx] : 'Others';
+    let targetCategoryId = category_id;
+    if (!targetCategoryId && (name || category_name)) {
+      const found = await Category.findOne({ category_name: name || category_name });
+      if (found) targetCategoryId = found.category_id;
     }
 
-    const resolvedType = period || type || 'monthly';
+    const resolvedType = type || period || 'monthly';
 
-    if (!resolvedCategory || limit === undefined) {
-      return res.status(400).json({ status: 'error', message: 'Category name and limit are required' });
+    if (!targetCategoryId || limit === undefined) {
+      return res.status(400).json({ status: 'error', message: 'Category and limit are required' });
     }
 
     const budget = await Budget.create({
       user_id: req.user.user_id,
-      category_name: resolvedCategory,
+      category_id: targetCategoryId,
       limit: parseFloat(limit),
       type: resolvedType,
     });
 
+    const catMap = await getCategoryMap();
+
     res.status(201).json({
       status: 'success',
-      data: budget,
+      data: {
+        budget_id: budget.budget_id,
+        id: budget.budget_id,
+        user_id: budget.user_id,
+        category_id: budget.category_id,
+        category_name: catMap[budget.category_id] || 'Others',
+        name: catMap[budget.category_id] || 'Others',
+        limit: budget.limit,
+        type: budget.type,
+        period: budget.type
+      },
     });
   } catch (err) {
     console.error('Create budget error:', err);
@@ -64,35 +93,40 @@ router.put('/:id', auth, async (req, res) => {
   try {
     const { name, category_name, category_id, limit, period, type } = req.body;
 
-    const budget = await Budget.findOne({ _id: req.params.id, user_id: req.user.user_id });
+    const budget = await Budget.findOne({ budget_id: req.params.id, user_id: req.user.user_id });
     if (!budget) {
       return res.status(404).json({ status: 'error', message: 'Budget not found' });
     }
 
-    let resolvedCategory = name || category_name;
-    if (!resolvedCategory && category_id) {
-      const categoryNames = [
-        '🍚 Food & Drinks',
-        '🚌 Transportation',
-        '📚 Education',
-        '🏠 Living Expenses',
-        '🎉 Personal & Entertainment'
-      ];
-      const idx = parseInt(category_id) - 1;
-      resolvedCategory = (idx >= 0 && idx < categoryNames.length) ? categoryNames[idx] : 'Others';
+    let targetCategoryId = category_id;
+    if (!targetCategoryId && (name || category_name)) {
+      const found = await Category.findOne({ category_name: name || category_name });
+      if (found) targetCategoryId = found.category_id;
     }
 
-    const resolvedType = period || type;
+    const resolvedType = type || period;
 
-    if (resolvedCategory) budget.category_name = resolvedCategory;
+    if (targetCategoryId) budget.category_id = targetCategoryId;
     if (limit !== undefined) budget.limit = parseFloat(limit);
     if (resolvedType) budget.type = resolvedType;
 
     await budget.save();
 
+    const catMap = await getCategoryMap();
+
     res.json({
       status: 'success',
-      data: budget,
+      data: {
+        budget_id: budget.budget_id,
+        id: budget.budget_id,
+        user_id: budget.user_id,
+        category_id: budget.category_id,
+        category_name: catMap[budget.category_id] || 'Others',
+        name: catMap[budget.category_id] || 'Others',
+        limit: budget.limit,
+        type: budget.type,
+        period: budget.type
+      },
     });
   } catch (err) {
     console.error('Update budget error:', err);
@@ -103,7 +137,7 @@ router.put('/:id', auth, async (req, res) => {
 // DELETE /api/budgets/:id
 router.delete('/:id', auth, async (req, res) => {
   try {
-    const budget = await Budget.findOneAndDelete({ _id: req.params.id, user_id: req.user.user_id });
+    const budget = await Budget.findOneAndDelete({ budget_id: req.params.id, user_id: req.user.user_id });
     if (!budget) {
       return res.status(404).json({ status: 'error', message: 'Budget not found' });
     }

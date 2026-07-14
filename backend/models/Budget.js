@@ -1,15 +1,21 @@
 import mongoose from 'mongoose';
+import crypto from 'crypto';
 
 const budgetSchema = new mongoose.Schema({
+  budget_id: {
+    type: String,
+    unique: true,
+    default: () => crypto.randomUUID(),
+  },
   user_id: {
     type: String,
     required: true,
     index: true,
   },
-  category_name: {
+  category_id: {
     type: String,
-    required: [true, 'Category name is required'],
-    trim: true,
+    required: [true, 'Category ID is required'],
+    index: true,
   },
   limit: {
     type: Number,
