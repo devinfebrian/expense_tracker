@@ -1,13 +1,19 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Layout from '../components/Layout';
-import { getTransactions, saveTransactions } from '../utils/storage.js';
+import { fetchTransactions, createTransaction, updateTransaction, deleteTransaction } from '../api/transactions.js';
 
 export default function Transactions() {
   const [transactions, setTransactions] = useState([]);
   const [filterPeriod, setFilterPeriod] = useState('all');
   const [filterCat, setFilterCat] = useState('all');
+
+  const [searchQuery, setSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [openDropdownId, setOpenDropdownId] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState(null);
+  const [loading, setLoading] = useState(true); // eslint-disable-line no-unused-vars
   const [form, setForm] = useState({
     merchant: '',
     category: 'Food',
@@ -15,7 +21,6 @@ export default function Transactions() {
     date: new Date().toISOString().split('T')[0],
     notes: ''
   });
-  const [summary, setSummary] = useState({ total: 0, count: 0 });
   const categories = ['Food', 'Transport', 'Shopping', 'Bills', 'Entertainment', 'Housing', 'Others'];
 
   const getCategoryClass = (cat) => {
@@ -25,24 +30,29 @@ export default function Transactions() {
     return 'surface-container-highest text-primary';
   };
 
-  const getCategoryIcon = (cat) => {
-    const c = cat.toLowerCase();
-    if (c === 'food') return 'restaurant';
-    if (c === 'transport') return 'directions_car';
-    if (c === 'shopping') return 'shopping_bag';
-    if (c === 'bills') return 'electric_bolt';
-    if (c === 'housing') return 'home';
-    if (c === 'entertainment') return 'movie';
-    return 'account_balance_wallet';
+
+  const loadTxns = async (search) => {
+    try {
+      setLoading(true);
+      const params = { period: 'all' };
+      if (search) params.search = search;
+      const data = await fetchTransactions(params);
+      setTransactions(data);
+    } catch (err) {
+      console.error('Failed to load transactions:', err);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const loadTxns = () => {
-    setTransactions(getTransactions());
-  };
+  useEffect(() => { loadTxns(); }, []); // eslint-disable-line react-hooks/set-state-in-effect
 
   useEffect(() => {
-    loadTxns();
-  }, []);
+    const timer = setTimeout(() => {
+      loadTxns(searchQuery);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   const filtered = transactions.filter(t => {
     if (filterCat !== 'all' && t.category !== filterCat) return false;
@@ -69,12 +79,31 @@ export default function Transactions() {
     return true;
   });
 
-  useEffect(() => {
-    setSummary({
-      total: filtered.reduce((s, t) => s + t.amount, 0),
-      count: filtered.length
-    });
-  }, [filtered]);
+  const summary = useMemo(() => ({
+    total: filtered.reduce((s, t) => s + t.amount, 0),
+    count: filtered.length
+  }), [filtered]);
+
+  const totalPages = Math.ceil(filtered.length / itemsPerPage);
+  const paginated = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return filtered.slice(start, start + itemsPerPage);
+  }, [filtered, currentPage, itemsPerPage]);
+
+  const pageNumbers = useMemo(() => {
+    const pages = [];
+    const range = 3;
+    let start = Math.max(1, currentPage - range);
+    let end = Math.min(totalPages, currentPage + range);
+    if (start > 2) pages.push(1, '...');
+    else if (start === 2) pages.push(1);
+    for (let i = start; i <= end; i++) pages.push(i);
+    if (end < totalPages - 1) pages.push('...', totalPages);
+    else if (end === totalPages - 1) pages.push(totalPages);
+    return pages;
+  }, [currentPage, totalPages]);
+
+  useEffect(() => { setCurrentPage(1); }, [filterPeriod, filterCat, searchQuery]); // eslint-disable-line react-hooks/set-state-in-effect
 
   const openAdd = () => {
     setEditing(null);
@@ -100,50 +129,51 @@ export default function Transactions() {
     setShowModal(true);
   };
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
     const amountVal = parseFloat(form.amount);
-    
-    let updatedTxns;
-    if (editing) {
-      updatedTxns = transactions.map(t => 
-        t.id === editing.id 
-          ? { 
-              ...t, 
-              merchant: form.merchant, 
-              category: form.category, 
-              amount: amountVal, 
-              date: form.date, 
-              notes: form.notes,
-              icon: getCategoryIcon(form.category),
-              categoryClass: getCategoryClass(form.category)
-            } 
-          : t
-      );
-    } else {
-      const newTxn = {
-        id: Date.now().toString(),
-        merchant: form.merchant,
-        category: form.category,
-        amount: amountVal,
-        date: form.date,
-        notes: form.notes,
-        icon: getCategoryIcon(form.category),
-        categoryClass: getCategoryClass(form.category)
-      };
-      updatedTxns = [newTxn, ...transactions];
-    }
 
-    saveTransactions(updatedTxns);
-    setTransactions(updatedTxns);
-    setShowModal(false);
+    try {
+      if (editing) {
+        await updateTransaction(editing.id, {
+          merchant: form.merchant,
+          category: form.category,
+          amount: amountVal,
+          date: form.date,
+          notes: form.notes,
+        });
+      } else {
+        await createTransaction({
+          merchant: form.merchant,
+          category: form.category,
+          amount: amountVal,
+          date: form.date,
+          notes: form.notes,
+        });
+      }
+      await loadTxns();
+      setShowModal(false);
+    } catch (err) {
+      console.error('Failed to save transaction:', err);
+    }
   };
 
-  const handleDelete = (id) => {
+  useEffect(() => {
+    const closeDropdown = (e) => {
+      if (!e.target.closest('.action-dropdown')) setOpenDropdownId(null);
+    };
+    document.addEventListener('click', closeDropdown);
+    return () => document.removeEventListener('click', closeDropdown);
+  }, []);
+
+  const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this expense?')) {
-      const updatedTxns = transactions.filter(t => t.id !== id);
-      saveTransactions(updatedTxns);
-      setTransactions(updatedTxns);
+      try {
+        await deleteTransaction(id);
+        await loadTxns();
+      } catch (err) {
+        console.error('Failed to delete transaction:', err);
+      }
     }
   };
 
@@ -166,18 +196,30 @@ export default function Transactions() {
         <button className="btn-primary" onClick={openAdd}>+ Add Expense</button>
       </div>
 
-      <div className="filter-section">
-        <div className="filter-tabs">
-          {periods.map(p => (
-            <button 
-              key={p.value} 
-              className={`filter-tab ${filterPeriod === p.value ? 'active' : ''}`} 
-              onClick={() => setFilterPeriod(p.value)}
-            >
-              {p.label}
-            </button>
-          ))}
+      <div className="search-bar" style={{ marginBottom: '16px' }}>
+        <div className="search-input-wrapper" style={{ position: 'relative', maxWidth: '400px' }}>
+          <span className="material-symbols-outlined" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--on-surface-variant)', fontSize: '20px' }}>search</span>
+          <input
+            type="text"
+            placeholder="Search by merchant or notes..."
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            className="form-input"
+            style={{ paddingLeft: '40px' }}
+          />
         </div>
+      </div>
+
+      <div className="filter-section">
+        <select
+          className="filter-select"
+          value={filterPeriod}
+          onChange={e => setFilterPeriod(e.target.value)}
+        >
+          {periods.map(p => (
+            <option key={p.value} value={p.value}>{p.label}</option>
+          ))}
+        </select>
         <select 
           className="filter-select" 
           value={filterCat} 
@@ -223,7 +265,7 @@ export default function Transactions() {
                   </td>
                 </tr>
               ) : (
-                filtered.map(txn => (
+                paginated.map(txn => (
                   <tr key={txn.id}>
                     <td>
                       <div className="merchant-cell">
@@ -236,16 +278,27 @@ export default function Transactions() {
                         </div>
                       </div>
                     </td>
-                    <td><span className={`category-chip ${txn.categoryClass || getCategoryClass(txn.category)}`}>{txn.category}</span></td>
-                    <td className="text-on-surface-variant">{txn.date}</td>
-                    <td className="text-right text-tertiary">-Rp{txn.amount.toLocaleString('id-ID')}</td>
-                    <td className="text-center">
-                      <button className="icon-btn" onClick={() => openEdit(txn)} style={{ marginRight: '6px' }}>
-                        <span className="material-symbols-outlined">edit</span>
-                      </button>
-                      <button className="icon-btn text-tertiary" onClick={() => handleDelete(txn.id)}>
-                        <span className="material-symbols-outlined">delete</span>
-                      </button>
+                    <td data-label="Category"><span className={`category-chip ${txn.categoryClass || getCategoryClass(txn.category)}`}>{txn.category}</span></td>
+                    <td data-label="Date" className="text-on-surface-variant">{txn.date}</td>
+                    <td data-label="Amount" className="text-right text-tertiary">-Rp{txn.amount.toLocaleString('id-ID')}</td>
+                    <td data-label="Action" className="text-center">
+                      <div className="action-dropdown">
+                        <button className="icon-btn" onClick={() => setOpenDropdownId(openDropdownId === txn.id ? null : txn.id)}>
+                          <span className="material-symbols-outlined">more_vert</span>
+                        </button>
+                        {openDropdownId === txn.id && (
+                          <div className="dropdown-menu">
+                            <button className="dropdown-item" onClick={() => { openEdit(txn); setOpenDropdownId(null); }}>
+                              <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>edit</span>
+                              Edit
+                            </button>
+                            <button className="dropdown-item danger" onClick={() => { handleDelete(txn.id); setOpenDropdownId(null); }}>
+                              <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>delete</span>
+                              Delete
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -254,6 +307,79 @@ export default function Transactions() {
           </table>
         </div>
       </div>
+
+      {filtered.length > 0 && (
+        <div className="pagination-bar">
+          <div className="pagination-info">
+            <span className="text-on-surface-variant">Show</span>
+            <select
+              className="filter-select"
+              value={itemsPerPage}
+              onChange={e => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); }}
+              style={{ width: 'auto', padding: '4px 8px', fontSize: '13px' }}
+            >
+              {[10,15,20,25,30,35,40,45,50].map(n => (
+                <option key={n} value={n}>{n}</option>
+              ))}
+            </select>
+            <span className="text-on-surface-variant">of {filtered.length} transactions</span>
+          </div>
+          <div className="pagination-controls">
+            <button
+              className="btn-secondary"
+              disabled={currentPage === 1}
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              style={{ padding: '6px 10px', fontSize: '13px' }}
+            >
+              Previous
+            </button>
+            <div className="pagination-pages">
+              {pageNumbers.map((p, i) =>
+                p === '...' ? (
+                  <span key={`ellipsis-${i}`} className="pagination-ellipsis">...</span>
+                ) : (
+                  <button
+                    key={p}
+                    className={`pagination-page-btn ${p === currentPage ? 'active' : ''}`}
+                    onClick={() => setCurrentPage(p)}
+                  >
+                    {p}
+                  </button>
+                )
+              )}
+            </div>
+            <div className="pagination-jump">
+              <span className="text-on-surface-variant" style={{ fontSize: '13px' }}>Go to</span>
+              <input
+                type="number"
+                className="form-input"
+                min={1}
+                max={totalPages}
+                placeholder="#"
+                onKeyDown={e => {
+                  if (e.key === 'Enter') {
+                    const val = parseInt(e.target.value, 10);
+                    if (!isNaN(val) && val >= 1 && val <= totalPages) {
+                      setCurrentPage(val);
+                      e.target.value = '';
+                    }
+                  }
+                }}
+                style={{ width: '48px', textAlign: 'center', padding: '4px', fontSize: '13px' }}
+              />
+              <span className="text-on-surface-variant" style={{ fontSize: '13px' }}>/ {totalPages}</span>
+            </div>
+            <button
+              className="btn-secondary"
+              disabled={currentPage === totalPages}
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              style={{ padding: '6px 10px', fontSize: '13px' }}
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
 
       {showModal && (
         <div className="modal-overlay" onClick={() => setShowModal(false)}>

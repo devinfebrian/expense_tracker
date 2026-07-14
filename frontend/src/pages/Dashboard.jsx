@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Layout from '../components/Layout';
-import { getTransactions, getBudgets } from '../utils/storage.js';
+import { fetchTransactions } from '../api/transactions.js';
+import { getBudgets } from '../utils/storage.js';
 
 export default function Dashboard() {
   const [transactions, setTransactions] = useState([]);
@@ -9,10 +10,17 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Load local client-side data instead of calling backend APIs
-    setTransactions(getTransactions());
-    setBudgets(getBudgets());
-    setLoading(false);
+    const load = async () => {
+      try {
+        const data = await fetchTransactions({ period: 'all' });
+        setTransactions(data);
+      } catch (err) {
+        console.error('Failed to load transactions:', err);
+      }
+      setBudgets(getBudgets());
+      setLoading(false);
+    };
+    load();
   }, []);
 
   // 1. Dynamic summary calculations
