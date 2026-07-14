@@ -253,7 +253,7 @@ export default function Transactions() {
                 <th>MERCHANT</th>
                 <th>CATEGORY</th>
                 <th>DATE</th>
-                <th className="text-right">AMOUNT</th>
+                <th className="text-center">AMOUNT</th>
                 <th className="text-center">ACTION</th>
               </tr>
             </thead>
@@ -280,7 +280,7 @@ export default function Transactions() {
                     </td>
                     <td data-label="Category"><span className={`category-chip ${txn.categoryClass || getCategoryClass(txn.category)}`}>{txn.category}</span></td>
                     <td data-label="Date" className="text-on-surface-variant">{txn.date}</td>
-                    <td data-label="Amount" className="text-right text-tertiary">-Rp{txn.amount.toLocaleString('id-ID')}</td>
+                    <td data-label="Amount" className="text-center text-tertiary">-Rp{txn.amount.toLocaleString('id-ID')}</td>
                     <td data-label="Action" className="text-center">
                       <div className="action-dropdown">
                         <button className="icon-btn" onClick={() => setOpenDropdownId(openDropdownId === txn.id ? null : txn.id)}>

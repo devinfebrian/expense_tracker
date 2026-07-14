@@ -1379,6 +1379,7 @@ img {
     border: none;
     display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: var(--space-sm)
   }
 
@@ -1401,14 +1402,9 @@ img {
     display: none
   }
 
-  .data-table tbody td.text-right {
-    text-align: left;
-    justify-content: flex-start
-  }
-
   .data-table tbody td.text-center {
-    text-align: left;
-    justify-content: flex-start
+    text-align: right;
+    justify-content: flex-end
   }
 
   .data-table tbody td[data-label="Action"]::before {
@@ -1419,6 +1415,10 @@ img {
     justify-content: flex-end;
     border-bottom: none;
     padding-bottom: 0
+  }
+
+  .data-table tbody td[data-label="Amount"] {
+    gap: calc(var(--space-lg) + 10px)
   }
 }
 
