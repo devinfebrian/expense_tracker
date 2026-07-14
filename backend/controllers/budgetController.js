@@ -1,14 +1,27 @@
 import * as budgetService from '../services/budgetService.js';
 
+const sendError = (res, err) => {
+  const clientErrors = new Set(['CastError', 'ValidationError']);
+  const status = err.statusCode || (clientErrors.has(err.name) ? 400 : 500);
+  const expose = err.statusCode || clientErrors.has(err.name);
+  if (!expose) console.error('Budget controller error:', err);
+  res.status(status).json({
+    status: 'error',
+    message: expose ? err.message : 'Internal server error',
+  });
+};
+
 export const getBudgets = async (req, res) => {
   try {
-    const budgets = await budgetService.fetchBudgetsByUserId(req.user.user_id);
+    const budgets = await budgetService.fetchBudgetsByUserId(req.user.user_id, {
+      period: req.query.period,
+    });
     res.json({
       status: 'success',
       data: budgets,
     });
   } catch (err) {
-    res.status(500).json({ status: 'error', message: err.message || 'Internal server error' });
+    sendError(res, err);
   }
 };
 
@@ -20,10 +33,7 @@ export const createBudget = async (req, res) => {
       data: result,
     });
   } catch (err) {
-    res.status(err.statusCode || 500).json({
-      status: 'error',
-      message: err.message || 'Internal server error',
-    });
+    sendError(res, err);
   }
 };
 
@@ -35,10 +45,7 @@ export const updateBudget = async (req, res) => {
       data: result,
     });
   } catch (err) {
-    res.status(err.statusCode || 500).json({
-      status: 'error',
-      message: err.message || 'Internal server error',
-    });
+    sendError(res, err);
   }
 };
 
@@ -50,9 +57,6 @@ export const deleteBudget = async (req, res) => {
       message: 'Budget deleted successfully',
     });
   } catch (err) {
-    res.status(err.statusCode || 500).json({
-      status: 'error',
-      message: err.message || 'Internal server error',
-    });
+    sendError(res, err);
   }
 };
