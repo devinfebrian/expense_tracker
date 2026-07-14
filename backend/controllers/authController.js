@@ -43,10 +43,7 @@ export const register = async (req, res) => {
       data: { user: attachUser(user) },
     });
   } catch (err) {
-    res.status(err.statusCode || 500).json({
-      status: 'error',
-      message: err.message || 'Internal server error',
-    });
+    sendError(res, err);
   }
 };
 

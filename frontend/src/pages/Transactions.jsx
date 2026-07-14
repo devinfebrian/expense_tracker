@@ -44,9 +44,12 @@ export default function Transactions() {
     const now = new Date();
     if (filterPeriod === 'daily') return d.toDateString() === now.toDateString();
     if (filterPeriod === 'weekly') {
-      const w = new Date(now);
-      w.setDate(w.getDate() - 7);
-      return d >= w;
+      const day = now.getDay();
+      const diff = (day + 6) % 7;
+      const monday = new Date(now);
+      monday.setDate(now.getDate() - diff);
+      monday.setHours(0, 0, 0, 0);
+      return d >= monday;
     }
     if (filterPeriod === 'monthly') return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
     if (filterPeriod === 'last7') {
@@ -69,7 +72,7 @@ export default function Transactions() {
   const totalPages = Math.max(1, Math.ceil(count / itemsPerPage));
   const paginated = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
-  useEffect(() => { setCurrentPage(1); }, [filterPeriod, filterCat, searchQuery]); // eslint-disable-line react-hooks/set-state-in-effect
+  useEffect(() => { setCurrentPage(1); }, [filterPeriod, filterCat, searchQuery, itemsPerPage]); // eslint-disable-line react-hooks/set-state-in-effect
 
   const openAdd = () => {
     setEditing(null);

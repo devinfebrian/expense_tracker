@@ -44,7 +44,7 @@ loadBudgets(user, 'current');
     try {
       await addTransaction(formPayload);
       setShowModal(false);
-      loadBudgets(user); // Reload budgets to update spent progress in real-time
+      loadBudgets(user, 'current');
     } catch (err) {
       console.error('Failed to save transaction:', err);
       alert(err.response?.data?.message || 'Failed to save transaction');

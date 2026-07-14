@@ -43,7 +43,14 @@ export const fetchBudgetsByUserId = async (user_id, { period = 'current' } = {})
     const cur = resolveCurrentPeriods();
     query.period = { $in: [cur.daily, cur.weekly, cur.monthly] };
   } else if (period && period !== 'all') {
-    query.period = period;
+    // Monthly "YYYY-MM" must also cover daily/weekly budgets whose period
+    // falls within that month (period format starts with YYYY-MM).
+    const parts = period.split('-');
+    if (parts.length === 2) {
+      query.period = { $regex: `^${period}` };
+    } else {
+      query.period = period;
+    }
   }
 
   const budgets = await Budget.find(query).sort({ createdAt: -1 });
