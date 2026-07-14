@@ -25,7 +25,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     loadTransactions();
-    loadBudgets(user);
+loadBudgets(user, 'current');
     loadCategories();
   }, [loadTransactions, loadBudgets, loadCategories, user]);
 
