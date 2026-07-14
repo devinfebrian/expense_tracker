@@ -7,7 +7,7 @@ import TransactionModal from '../components/TransactionModal';
 import { useTransactionStore } from '../store/useTransactionStore';
 import { useBudgetStore } from '../store/useBudgetStore';
 import { useAuthStore } from '../store/useAuthStore';
-import { getPeriodRange, getCurrentPeriod, getPrevPeriod, getNextPeriod, formatPeriodLabel, getMonthlyWindow, getShortMonthLabel } from '../utils/period';
+import { getPeriodRange, getCurrentPeriod, getPrevPeriod, getNextPeriod, formatPeriodLabel } from '../utils/period';
 import getCategoryIcon from '../utils/categoryIcon';
 
 const CATEGORY_COLORS = ['#6750A4', '#EADDFF', '#79747E', '#322F35'];
@@ -53,12 +53,13 @@ export default function Dashboard() {
     expenseChange,
     expenseProgress,
     remainingBudget,
-    dailyAverage,
+    todaySpent,
+    todayTxns,
     periodTxns,
     categoryBreakdown,
     calculatedBudgets,
-    trendMonths,
-    trendTotals,
+    dailyLabels,
+    dailyTotals,
   } = useMemo(() => {
     // All comparisons UTC, period-range based.
     const range = getPeriodRange(selectedPeriod);
@@ -93,18 +94,15 @@ export default function Dashboard() {
     const expenseProgress = totalLimit > 0 ? Math.min(Math.round((totalSpent / totalLimit) * 100), 100) : 0;
     const remainingBudget = Math.max(totalLimit - totalSpent, 0);
 
-    // Daily average: current month uses days elapsed; past month uses full month length.
-    const now = new Date();
-    const isCurrent = selectedPeriod === getCurrentPeriod('monthly');
-    let daysForAverage;
-    if (isCurrent && range) {
-      daysForAverage = Math.max(1, Math.floor((now - range.start) / (1000 * 60 * 60 * 24)) + 1);
-    } else if (range) {
-      daysForAverage = Math.max(1, Math.round((range.end - range.start) / (1000 * 60 * 60 * 24)));
-    } else {
-      daysForAverage = 1;
-    }
-    const dailyAverage = Math.round(totalSpent / daysForAverage);
+    // Today's spending
+    const today = new Date();
+    const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const todayEnd = new Date(todayStart.getTime() + 24 * 60 * 60 * 1000);
+    const todayTxns = transactions.filter(t => {
+      const d = new Date(t.date);
+      return d >= todayStart && d < todayEnd;
+    });
+    const todaySpent = todayTxns.reduce((sum, t) => sum + t.amount, 0);
 
     // Category breakdown: scope to selected period.
     const categoriesMap = {};
@@ -157,18 +155,23 @@ export default function Dashboard() {
         };
       });
 
-    // Spending trends: last 12 months ending at selectedPeriod.
-    const trendMonths = getMonthlyWindow(selectedPeriod, 12);
-    const trendTotals = trendMonths.map(p => {
-      const r = getPeriodRange(p);
-      if (!r) return 0;
-      return transactions
+    // Daily spending for selected month
+    const dailyLabels = [];
+    const dailyTotals = [];
+    const cur = new Date(range.start);
+    while (cur < range.end) {
+      const dayStart = new Date(cur);
+      const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
+      const daySpent = transactions
         .filter(t => {
           const d = new Date(t.date);
-          return d >= r.start && d < r.end;
+          return d >= dayStart && d < dayEnd;
         })
         .reduce((sum, t) => sum + t.amount, 0);
-    });
+      dailyLabels.push(dayStart.getUTCDate());
+      dailyTotals.push(daySpent);
+      cur.setUTCDate(cur.getUTCDate() + 1);
+    }
 
     return {
       totalExpenses,
@@ -176,12 +179,13 @@ export default function Dashboard() {
       expenseChange,
       expenseProgress,
       remainingBudget,
-      dailyAverage,
+      todaySpent,
+      todayTxns,
       periodTxns,
       categoryBreakdown,
       calculatedBudgets,
-      trendMonths,
-      trendTotals,
+      dailyLabels,
+      dailyTotals,
     };
   }, [transactions, budgets, selectedPeriod]);
 
@@ -220,11 +224,14 @@ export default function Dashboard() {
     if (next) setSelectedPeriod(next);
   };
 
-  const maxTrend = Math.max(...trendTotals);
-  const trendBars = trendTotals.map(v => {
-    if (maxTrend === 0) return 10;
-    return Math.max(Math.round((v / maxTrend) * 90), 10);
-  });
+  const maxDaily = Math.max(...dailyTotals, 1);
+  const linePoints = dailyTotals.length > 0
+    ? dailyTotals.map((v, i) => {
+        const x = dailyTotals.length > 1 ? (i / (dailyTotals.length - 1)) * 100 : 50;
+        const y = 50 - (v / maxDaily) * 44;
+        return `${x.toFixed(1)},${y.toFixed(1)}`;
+      }).join(' ')
+    : '';
 
   if (loading && transactions.length === 0) {
     return (
@@ -295,11 +302,11 @@ export default function Dashboard() {
           </div>
         </SummaryCard>
         <SummaryCard
-          label="DAILY AVERAGE"
-          value={`Rp${dailyAverage.toLocaleString('id-ID')}`}
+          label="TODAY'S SPENDING"
+          value={`Rp${todaySpent.toLocaleString('id-ID')}`}
           valueClass="text-tertiary"
-          trend={isCurrentPeriod ? 'Based on days elapsed this month' : 'Based on full month length'}
-          trendIcon="info"
+          trend={todayTxns.length > 0 ? `${todayTxns.length} transaction(s) today` : 'No transactions today'}
+          trendIcon="today"
           trendColor="var(--on-surface-variant)"
         />
       </div>
@@ -383,20 +390,24 @@ export default function Dashboard() {
             <h4 className="chart-title">Spending Trends</h4>
             <div className="chart-legend">
               <span className="legend-dot bg-primary" />
-              <span className="legend-label">Monthly Spending</span>
+              <span className="legend-label">Daily Spending</span>
             </div>
           </div>
-          <div className="bar-chart">
-            {trendBars.map((v, i) => (
-              <div key={i} className="bar-item">
-                <div className={`bar ${trendMonths[i] === currentPeriodStr ? 'bar-active' : ''}`} style={{ height: `${v}%` }} />
-              </div>
-            ))}
-          </div>
-          <div className="bar-labels">
-            {trendMonths.map(p => (
-              <span key={p}>{getShortMonthLabel(p)}</span>
-            ))}
+          <div className="line-chart-container">
+            <svg viewBox="0 0 100 50" preserveAspectRatio="none" className="line-chart-svg">
+              <polyline
+                fill="none"
+                stroke="var(--primary)"
+                strokeWidth="0.6"
+                vectorEffect="non-scaling-stroke"
+                points={linePoints}
+              />
+            </svg>
+            <div className="line-chart-labels">
+              {dailyLabels.filter((_, i) => i === 0 || i === dailyLabels.length - 1 || (i + 1) % 5 === 0 || dailyLabels.length <= 10).map(d => (
+                <span key={d}>{d}</span>
+              ))}
+            </div>
           </div>
         </div>
       </div>
