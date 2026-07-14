@@ -1,9 +1,11 @@
-import { useState, useEffect, useMemo } from 'react';
+/* eslint-disable react-hooks/set-state-in-effect */
+import { useState, useEffect, useCallback } from 'react';
 import Layout from '../components/Layout';
 import api from '../api/axios.js';
 
 export default function Transactions() {
   const [transactions, setTransactions] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [filterPeriod, setFilterPeriod] = useState('all');
   const [filterCat, setFilterCat] = useState('all');
 
@@ -16,57 +18,54 @@ export default function Transactions() {
   const [loading, setLoading] = useState(true); // eslint-disable-line no-unused-vars
   const [form, setForm] = useState({
     merchant: '',
-    category: '🍚 Food & Drinks',
+    category_id: '',
     amount: '',
     date: new Date().toISOString().split('T')[0],
     notes: ''
   });
-
-  const categories = [
-    '🍚 Food & Drinks',
-    '🚌 Transportation',
-    '📚 Education',
-    '🏠 Living Expenses',
-    '🎉 Personal & Entertainment'
-  ];
 
   const getCategoryClass = (cat) => {
     return 'surface-container-highest text-primary';
   };
 
   const getCategoryIcon = (cat) => {
-    const c = cat.toLowerCase();
-    if (c.includes('food')) return 'restaurant';
-    if (c.includes('transport')) return 'directions_car';
-    if (c.includes('education')) return 'school';
-    if (c.includes('living')) return 'home';
-    if (c.includes('personal') || c.includes('entertainment')) return 'celebration';
+    const c = cat?.toLowerCase() || '';
+    if (c.includes('food') || c.includes('drinks') || c.includes('meals')) return 'restaurant';
+    if (c.includes('transport') || c.includes('taxi') || c.includes('bus') || c.includes('car')) return 'directions_car';
+    if (c.includes('education') || c.includes('books') || c.includes('school')) return 'school';
+    if (c.includes('living') || c.includes('rent') || c.includes('dorm') || c.includes('housing')) return 'home';
+    if (c.includes('personal') || c.includes('entertainment') || c.includes('shopping') || c.includes('movie') || c.includes('games')) return 'celebration';
     return 'account_balance_wallet';
   };
 
-  const loadTxns = async () => {
+  const loadData = useCallback(async () => {
     try {
-      const res = await api.get('/transactions');
-      const mapped = (res.data.data || []).map(t => ({
+      const [catRes, txRes] = await Promise.all([
+        api.get('/categories'),
+        api.get('/transactions')
+      ]);
+      const rawCategories = catRes.data.data.categories || catRes.data.data || [];
+      const rawTxns = txRes.data.data.transactions || txRes.data.data || [];
+
+      setCategories(rawCategories);
+      
+      const mapped = rawTxns.map(t => ({
         ...t,
         icon: getCategoryIcon(t.category),
         categoryClass: getCategoryClass(t.category)
       }));
       setTransactions(mapped);
     } catch (err) {
-      console.error('Error fetching transactions:', err);
+      console.error('Failed to load transaction data:', err);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      loadTxns();
-    }, 400);
-    return () => clearTimeout(timer);
-  }, [searchQuery]);
+    loadData();
+  }, [loadData]);
 
   const filtered = transactions.filter(t => {
-    if (filterCat !== 'all' && t.category !== filterCat) return false;
+    if (filterCat !== 'all' && t.category_id !== filterCat) return false;
     
     // Search query matching merchant or notes
     if (searchQuery) {
@@ -99,29 +98,22 @@ export default function Transactions() {
     return true;
   });
 
-  const summary = useMemo(() => ({
-    total: filtered.reduce((s, t) => s + t.amount, 0),
-    count: filtered.length
-  }), [filtered]);
+  const total = filtered.reduce((s, t) => s + t.amount, 0);
+  const count = filtered.length;
+  const average = count > 0 ? Math.round(total / count) : 0;
 
-  const totalPages = Math.ceil(filtered.length / itemsPerPage);
-  const paginated = useMemo(() => {
-    const start = (currentPage - 1) * itemsPerPage;
-    return filtered.slice(start, start + itemsPerPage);
-  }, [filtered, currentPage, itemsPerPage]);
+  const totalPages = Math.max(1, Math.ceil(count / itemsPerPage));
+  const paginated = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
-  const pageNumbers = useMemo(() => {
-    const pages = [];
-    const range = 3;
-    let start = Math.max(1, currentPage - range);
-    let end = Math.min(totalPages, currentPage + range);
-    if (start > 2) pages.push(1, '...');
-    else if (start === 2) pages.push(1);
-    for (let i = start; i <= end; i++) pages.push(i);
-    if (end < totalPages - 1) pages.push('...', totalPages);
-    else if (end === totalPages - 1) pages.push(totalPages);
-    return pages;
-  }, [currentPage, totalPages]);
+  const pageNumbers = [];
+  const range = 3;
+  let start = Math.max(1, currentPage - range);
+  let end = Math.min(totalPages, currentPage + range);
+  if (start > 2) pageNumbers.push(1, '...');
+  else if (start === 2) pageNumbers.push(1);
+  for (let i = start; i <= end; i++) pageNumbers.push(i);
+  if (end < totalPages - 1) pageNumbers.push('...', totalPages);
+  else if (end === totalPages - 1) pageNumbers.push(totalPages);
 
   useEffect(() => { setCurrentPage(1); }, [filterPeriod, filterCat, searchQuery]); // eslint-disable-line react-hooks/set-state-in-effect
 
@@ -129,7 +121,7 @@ export default function Transactions() {
     setEditing(null);
     setForm({
       merchant: '',
-      category: '🍚 Food & Drinks',
+      category_id: categories[0]?.category_id || categories[0]?.id || '',
       amount: '',
       date: new Date().toISOString().split('T')[0],
       notes: ''
@@ -141,7 +133,7 @@ export default function Transactions() {
     setEditing(t);
     setForm({
       merchant: t.merchant,
-      category: t.category,
+      category_id: t.category_id,
       amount: t.amount.toString(),
       date: t.date,
       notes: t.notes || ''
@@ -155,9 +147,9 @@ export default function Transactions() {
     
     try {
       if (editing) {
-        await api.put(`/transactions/${editing.id}`, {
+        await api.put(`/transactions/${editing.transaction_id}`, {
           merchant: form.merchant,
-          category: form.category,
+          category_id: form.category_id,
           amount: amountVal,
           date: form.date,
           notes: form.notes
@@ -165,16 +157,16 @@ export default function Transactions() {
       } else {
         await api.post('/transactions', {
           merchant: form.merchant,
-          category: form.category,
+          category_id: form.category_id,
           amount: amountVal,
           date: form.date,
           notes: form.notes
         });
       }
-      await loadTxns();
       setShowModal(false);
+      loadData();
     } catch (err) {
-      console.error('Error saving transaction:', err);
+      console.error('Failed to save transaction:', err);
       alert(err.response?.data?.message || 'Failed to save transaction');
     }
   };
@@ -187,14 +179,14 @@ export default function Transactions() {
     return () => document.removeEventListener('click', closeDropdown);
   }, []);
 
-  const handleDelete = async (id) => {
+  const handleDelete = async (transaction_id) => {
     if (window.confirm('Are you sure you want to delete this expense?')) {
       try {
-        await api.delete(`/transactions/${id}`);
-        await loadTxns();
+        await api.delete(`/transactions/${transaction_id}`);
+        loadData();
       } catch (err) {
-        console.error('Error deleting transaction:', err);
-        alert(err.response?.data?.message || 'Failed to delete transaction');
+        console.error('Failed to delete transaction:', err);
+        alert('Failed to delete transaction');
       }
     }
   };
@@ -248,22 +240,22 @@ export default function Transactions() {
           onChange={e => setFilterCat(e.target.value)}
         >
           <option value="all">All Categories</option>
-          {categories.map(c => <option key={c} value={c}>{c}</option>)}
+          {categories.map(c => <option key={c.category_id || c.id} value={c.category_id || c.id}>{c.category_name}</option>)}
         </select>
       </div>
 
       <div className="txn-summary">
         <div className="summary-card mini">
           <p className="summary-label">TOTAL EXPENSES</p>
-          <h3 className="summary-value">Rp{summary.total.toLocaleString('id-ID')}</h3>
+          <h3 className="summary-value">Rp{total.toLocaleString('id-ID')}</h3>
         </div>
         <div className="summary-card mini">
           <p className="summary-label">TRANSACTIONS</p>
-          <h3 className="summary-value">{summary.count}</h3>
+          <h3 className="summary-value">{count}</h3>
         </div>
         <div className="summary-card mini">
           <p className="summary-label">AVERAGE</p>
-          <h3 className="summary-value">Rp{summary.count > 0 ? Math.round(summary.total / summary.count).toLocaleString('id-ID') : 0}</h3>
+          <h3 className="summary-value">Rp{average.toLocaleString('id-ID')}</h3>
         </div>
       </div>
 
@@ -288,11 +280,11 @@ export default function Transactions() {
                 </tr>
               ) : (
                 paginated.map(txn => (
-                  <tr key={txn.id}>
+                  <tr key={txn.transaction_id}>
                     <td>
                       <div className="merchant-cell">
                         <div className="merchant-icon">
-                          <span className="material-symbols-outlined">{txn.icon}</span>
+                          <span className="material-symbols-outlined">{txn.icon || getCategoryIcon(txn.category)}</span>
                         </div>
                         <div>
                           <span>{txn.merchant}</span>
@@ -305,16 +297,16 @@ export default function Transactions() {
                     <td data-label="Amount" className="text-center text-tertiary">-Rp{txn.amount.toLocaleString('id-ID')}</td>
                     <td data-label="Action" className="text-center">
                       <div className="action-dropdown">
-                        <button className="icon-btn" onClick={() => setOpenDropdownId(openDropdownId === txn.id ? null : txn.id)}>
+                        <button className="icon-btn" onClick={() => setOpenDropdownId(openDropdownId === txn.transaction_id ? null : txn.transaction_id)}>
                           <span className="material-symbols-outlined">more_vert</span>
                         </button>
-                        {openDropdownId === txn.id && (
+                        {openDropdownId === txn.transaction_id && (
                           <div className="dropdown-menu">
                             <button className="dropdown-item" onClick={() => { openEdit(txn); setOpenDropdownId(null); }}>
                               <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>edit</span>
                               Edit
                             </button>
-                            <button className="dropdown-item danger" onClick={() => { handleDelete(txn.id); setOpenDropdownId(null); }}>
+                            <button className="dropdown-item danger" onClick={() => { handleDelete(txn.transaction_id); setOpenDropdownId(null); }}>
                               <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>delete</span>
                               Delete
                             </button>
@@ -427,10 +419,10 @@ export default function Transactions() {
                   <label className="form-label">Category</label>
                   <select 
                     className="form-input" 
-                    value={form.category} 
-                    onChange={e => setForm(f => ({ ...f, category: e.target.value }))}
+                    value={form.category_id} 
+                    onChange={e => setForm(f => ({ ...f, category_id: e.target.value }))}
                   >
-                    {categories.map(c => <option key={c} value={c}>{c}</option>)}
+                    {categories.map(c => <option key={c.category_id || c.id} value={c.category_id || c.id}>{c.category_name}</option>)}
                   </select>
                 </div>
               </div>

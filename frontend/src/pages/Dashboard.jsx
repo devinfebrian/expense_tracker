@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import Layout from '../components/Layout';
 import api from '../api/axios.js';
@@ -8,23 +8,42 @@ export default function Dashboard() {
   const [budgets, setBudgets] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [txnRes, budgetRes] = await Promise.all([
-          api.get('/transactions'),
-          api.get('/budgets')
-        ]);
-        setTransactions(txnRes.data.data || []);
-        setBudgets(budgetRes.data.data || []);
-      } catch (err) {
-        console.error('Error fetching dashboard data:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
+  const getCategoryClass = (cat) => {
+    return 'surface-container-highest text-primary';
+  };
+
+  const getCategoryIcon = (cat) => {
+    const c = cat?.toLowerCase() || '';
+    if (c.includes('food') || c.includes('drinks') || c.includes('meals')) return 'restaurant';
+    if (c.includes('transport') || c.includes('taxi') || c.includes('bus') || c.includes('car')) return 'directions_car';
+    if (c.includes('education') || c.includes('books') || c.includes('school')) return 'school';
+    if (c.includes('living') || c.includes('rent') || c.includes('dorm') || c.includes('housing')) return 'home';
+    if (c.includes('personal') || c.includes('entertainment') || c.includes('shopping') || c.includes('movie') || c.includes('games')) return 'celebration';
+    return 'account_balance_wallet';
+  };
+
+  const loadData = useCallback(async () => {
+    try {
+      const [budgetRes, txRes] = await Promise.all([
+        api.get('/budgets'),
+        api.get('/transactions')
+      ]);
+      
+      const rawBudgets = budgetRes.data.data.budgets || budgetRes.data.data || [];
+      const rawTxns = txRes.data.data.transactions || txRes.data.data || [];
+      
+      setBudgets(rawBudgets);
+      setTransactions(rawTxns);
+    } catch (err) {
+      console.error('Failed to load dashboard data:', err);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   // 1. Dynamic summary calculations
   const totalExpenses = transactions.reduce((sum, t) => sum + t.amount, 0);
@@ -110,16 +129,6 @@ export default function Dashboard() {
     }
   };
 
-  const getBudgetIcon = (name) => {
-    const n = name.toLowerCase();
-    if (n.includes('housing') || n.includes('rent') || n.includes('living')) return 'home';
-    if (n.includes('dining') || n.includes('restaurant') || n.includes('food') || n.includes('grocery') || n.includes('groceries')) return 'restaurant';
-    if (n.includes('transport') || n.includes('car')) return 'directions_car';
-    if (n.includes('entertainment') || n.includes('movie') || n.includes('netflix') || n.includes('personal')) return 'movie';
-    if (n.includes('education')) return 'school';
-    return 'account_balance_wallet';
-  };
-
   const calculatedBudgets = budgets.map(b => {
     const startOfPeriod = getPeriodStart(b.period);
     const categoryTxns = transactions.filter(t => 
@@ -147,7 +156,7 @@ export default function Dashboard() {
       status,
       statusClass,
       warning,
-      icon: b.icon || getBudgetIcon(b.name)
+      icon: b.icon || getCategoryIcon(b.name)
     };
   });
 
@@ -265,7 +274,7 @@ export default function Dashboard() {
                       <td>
                         <div className="merchant-cell">
                           <div className="merchant-icon">
-                            <span className="material-symbols-outlined">{txn.icon}</span>
+                            <span className="material-symbols-outlined">{txn.icon || getCategoryIcon(txn.category)}</span>
                           </div>
                           <span>{txn.merchant}</span>
                         </div>

@@ -14,6 +14,26 @@ const realApi = axios.create({
   withCredentials: true,
 });
 
+const categoryNames = [
+  '🍚 Food & Drinks',
+  '🚌 Transportation',
+  '📚 Education',
+  '🏠 Living Expenses',
+  '🎉 Personal & Entertainment'
+];
+
+const getCategoryNameById = (id) => {
+  const idx = parseInt(id) - 1;
+  if (idx >= 0 && idx < categoryNames.length) return categoryNames[idx];
+  return 'Others';
+};
+
+const getCategoryIdByName = (name) => {
+  const idx = categoryNames.indexOf(name);
+  if (idx !== -1) return (idx + 1).toString();
+  return '5'; // default/fallback to others
+};
+
 // Mock api wrapper that intercepts transaction/budget actions to use localStorage
 const api = {
   get: async (url, config) => {
@@ -23,12 +43,40 @@ const api = {
     
     if (url === '/transactions' || url === 'transactions') {
       const txns = getTransactions();
-      return { data: { status: 'success', data: txns } };
+      const mapped = txns.map(t => ({
+        ...t,
+        transaction_id: t.id, // For Raihan
+        category_id: t.category_id || getCategoryIdByName(t.category) // For Raihan
+      }));
+      const resData = [...mapped];
+      resData.transactions = mapped; // Compatible with Raihan's page format
+      return { data: { status: 'success', data: resData } };
     }
     
     if (url === '/budgets' || url === 'budgets') {
       const budgets = getBudgets();
-      return { data: { status: 'success', data: budgets } };
+      const mapped = budgets.map(b => ({
+        ...b,
+        budget_id: b.id, // For Raihan
+        category_name: b.name, // For Raihan
+        type: b.period || 'monthly', // For Raihan
+        category_id: b.category_id || getCategoryIdByName(b.name) // For Raihan
+      }));
+      const resData = [...mapped];
+      resData.budgets = mapped; // Compatible with Raihan's page format
+      return { data: { status: 'success', data: resData } };
+    }
+    
+    if (url === '/categories' || url === 'categories') {
+      const mapped = categoryNames.map((name, i) => ({
+        id: (i + 1).toString(),
+        category_id: (i + 1).toString(), // For Raihan
+        category_name: name,
+        name: name // for general compatibility
+      }));
+      const resData = [...mapped];
+      resData.categories = mapped;
+      return { data: { status: 'success', data: resData } };
     }
     
     if (url === '/budgets/adjustments' || url === 'budgets/adjustments') {
@@ -112,7 +160,7 @@ const api = {
       const newTxn = {
         id: Date.now().toString(),
         merchant: data.merchant,
-        category: data.category,
+        category: data.category || getCategoryNameById(data.category_id),
         amount: parseFloat(data.amount),
         date: data.date,
         notes: data.notes || ''
@@ -126,9 +174,9 @@ const api = {
       const budgets = getBudgets();
       const newBudget = {
         id: Date.now().toString(),
-        name: data.name,
+        name: data.name || getCategoryNameById(data.category_id),
         limit: parseFloat(data.limit),
-        period: data.period
+        period: data.period || data.type || 'monthly'
       };
       const updated = [...budgets, newBudget];
       saveBudgets(updated);
@@ -150,7 +198,12 @@ const api = {
     if (basePath === '/transactions' || basePath === 'transactions') {
       const txns = getTransactions();
       const updated = txns.map(t => 
-        t.id === id ? { ...t, ...data, amount: parseFloat(data.amount) } : t
+        t.id === id ? { 
+          ...t, 
+          ...data, 
+          category: data.category || (data.category_id ? getCategoryNameById(data.category_id) : t.category),
+          amount: parseFloat(data.amount) 
+        } : t
       );
       saveTransactions(updated);
       return { data: { status: 'success' } };
@@ -159,7 +212,12 @@ const api = {
     if (basePath === '/budgets' || basePath === 'budgets') {
       const budgets = getBudgets();
       const updated = budgets.map(b => 
-        b.id === id ? { ...b, ...data, limit: parseFloat(data.limit) } : b
+        b.id === id ? { 
+          ...b, 
+          name: data.name || (data.category_id ? getCategoryNameById(data.category_id) : b.name),
+          limit: parseFloat(data.limit),
+          period: data.period || data.type || b.period
+        } : b
       );
       saveBudgets(updated);
       return { data: { status: 'success' } };

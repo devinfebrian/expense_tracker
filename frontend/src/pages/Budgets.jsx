@@ -1,39 +1,35 @@
-import { useState, useEffect } from 'react';
+/* eslint-disable react-hooks/set-state-in-effect */
+import { useState, useEffect, useCallback } from 'react';
 import Layout from '../components/Layout';
 import api from '../api/axios.js';
-import { getAdjustments, saveAdjustments } from '../utils/storage.js';
+import { useAuth } from '../hooks/useAuth.js';
 
 export default function Budgets() {
+  const { user } = useAuth();
   const [budgets, setBudgets] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [adjustments, setAdjustments] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState(null);
-  const [form, setForm] = useState({ name: '🍚 Food & Drinks', limit: '', period: 'monthly' });
+  const [loading, setLoading] = useState(true);
+  const [form, setForm] = useState({ category_id: '', limit: '', type: 'monthly' });
   const [error, setError] = useState('');
 
-  const categories = [
-    '🍚 Food & Drinks',
-    '🚌 Transportation',
-    '📚 Education',
-    '🏠 Living Expenses',
-    '🎉 Personal & Entertainment'
-  ];
-
   const getBudgetIcon = (name) => {
-    const n = name.toLowerCase();
-    if (n.includes('housing') || n.includes('rent') || n.includes('living')) return 'home';
-    if (n.includes('dining') || n.includes('restaurant') || n.includes('food') || n.includes('grocery') || n.includes('groceries')) return 'restaurant';
-    if (n.includes('transport') || n.includes('car')) return 'directions_car';
-    if (n.includes('entertainment') || n.includes('movie') || n.includes('netflix')) return 'movie';
-    if (n.includes('education')) return 'school';
+    const n = name?.toLowerCase() || '';
+    if (n.includes('food') || n.includes('drinks') || n.includes('meals') || n.includes('restaurant')) return 'restaurant';
+    if (n.includes('transport') || n.includes('taxi') || n.includes('bus') || n.includes('car')) return 'directions_car';
+    if (n.includes('education') || n.includes('books') || n.includes('school')) return 'school';
+    if (n.includes('living') || n.includes('rent') || n.includes('dorm') || n.includes('housing')) return 'home';
+    if (n.includes('personal') || n.includes('entertainment') || n.includes('shopping') || n.includes('movie') || n.includes('games')) return 'celebration';
     return 'account_balance_wallet';
   };
 
-  const getPeriodStart = (period) => {
+  const getPeriodStart = (type) => {
     const now = new Date();
-    if (period === 'daily') {
+    if (type === 'daily') {
       return new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    } else if (period === 'weekly') {
+    } else if (type === 'weekly') {
       const day = now.getDay();
       const diff = now.getDate() - day + (day === 0 ? -6 : 1);
       return new Date(now.getFullYear(), now.getMonth(), diff);
@@ -42,21 +38,25 @@ export default function Budgets() {
     }
   };
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
-      const [budgetRes, txnRes] = await Promise.all([
+      const [catRes, budgetRes, txRes] = await Promise.all([
+        api.get('/categories'),
         api.get('/budgets'),
         api.get('/transactions')
       ]);
-      const rawBudgets = budgetRes.data.data || [];
-      const transactions = txnRes.data.data || [];
-      const rawAdjustments = getAdjustments();
+      
+      const rawCategories = catRes.data.data || [];
+      const rawBudgets = budgetRes.data.data.budgets || budgetRes.data.data || [];
+      const rawTxns = txRes.data.data.transactions || txRes.data.data || [];
 
-      // Map spent amounts and warning states on the fly from actual transactions
+      setCategories(rawCategories);
+
+      // Compute spent dynamically on the client
       const calculatedBudgets = rawBudgets.map(b => {
-        const startOfPeriod = getPeriodStart(b.period);
-        const categoryTxns = transactions.filter(t => 
-          t.category.toLowerCase() === b.name.toLowerCase() && 
+        const startOfPeriod = getPeriodStart(b.type);
+        const categoryTxns = rawTxns.filter(t => 
+          t.category.toLowerCase() === b.category_name.toLowerCase() && 
           new Date(t.date) >= startOfPeriod
         );
         const spent = categoryTxns.reduce((sum, t) => sum + t.amount, 0);
@@ -78,32 +78,42 @@ export default function Budgets() {
           percentage,
           status,
           statusClass,
-          icon: b.icon || getBudgetIcon(b.name)
+          icon: b.icon || getBudgetIcon(b.category_name)
         };
       });
 
       setBudgets(calculatedBudgets);
-      setAdjustments(rawAdjustments);
+
+      if (user) {
+        const storedAdjustments = localStorage.getItem(`duidku_adjustments_${user.user_id}`);
+        setAdjustments(storedAdjustments ? JSON.parse(storedAdjustments) : []);
+      }
     } catch (err) {
       console.error('Error loading budget data:', err);
+    } finally {
+      setLoading(false);
     }
-  };
+  }, [user]);
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [loadData]);
 
   const openAdd = () => {
     setEditing(null);
     setError('');
-    setForm({ name: '🍚 Food & Drinks', limit: '', period: 'monthly' });
+    setForm({ 
+      category_id: categories[0]?.category_id || categories[0]?.id || '', 
+      limit: '', 
+      type: 'monthly' 
+    });
     setShowModal(true);
   };
 
   const openEdit = (b) => {
     setEditing(b);
     setError('');
-    setForm({ name: b.name, limit: b.limit.toString(), period: b.period });
+    setForm({ category_id: b.category_id, limit: b.limit.toString(), type: b.type });
     setShowModal(true);
   };
 
@@ -112,90 +122,93 @@ export default function Budgets() {
     setError('');
     const newLimit = parseFloat(form.limit);
     const todayStr = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    const selectedCategoryName = categories.find(c => (c.category_id === form.category_id || c.id === form.category_id))?.category_name || '';
 
     try {
+      let updatedAdjustments = [...adjustments];
+
       if (editing) {
         const prevLimit = editing.limit;
         const limitDiff = newLimit - prevLimit;
         
-        await api.put(`/budgets/${editing.id}`, {
-          name: form.name,
+        await api.put(`/budgets/${editing.budget_id}`, {
+          category_id: form.category_id,
           limit: newLimit,
-          period: form.period
+          type: form.type
         });
 
-        // Log the adjustment change
         if (limitDiff !== 0) {
           const newAdjustment = {
             date: todayStr,
-            category: form.name,
+            category: selectedCategoryName,
             previousLimit: prevLimit,
             newLimit: newLimit,
             change: limitDiff,
             changeClass: limitDiff >= 0 ? 'text-secondary' : 'text-error'
           };
-          const updatedAdjustments = [newAdjustment, ...adjustments];
-          saveAdjustments(updatedAdjustments);
+          updatedAdjustments = [newAdjustment, ...updatedAdjustments];
         }
       } else {
         // Check if budget for this category already exists
-        const exists = budgets.some(b => b.name.toLowerCase() === form.name.toLowerCase());
+        const exists = budgets.some(b => b.category_name.toLowerCase() === selectedCategoryName.toLowerCase());
         if (exists) {
-          setError(`A budget for "${form.name}" already exists. Please edit the existing one instead.`);
+          setError(`A budget for "${selectedCategoryName}" already exists. Please edit the existing one instead.`);
           return;
         }
 
         await api.post('/budgets', {
-          name: form.name,
+          category_id: form.category_id,
           limit: newLimit,
-          period: form.period
+          type: form.type
         });
 
-        // Log positive creation adjustment
         const newAdjustment = {
           date: todayStr,
-          category: form.name,
+          category: selectedCategoryName,
           previousLimit: 0,
           newLimit: newLimit,
           change: newLimit,
           changeClass: 'text-secondary'
         };
-        const updatedAdjustments = [newAdjustment, ...adjustments];
-        saveAdjustments(updatedAdjustments);
+        updatedAdjustments = [newAdjustment, ...updatedAdjustments];
       }
 
+      if (user) {
+        localStorage.setItem(`duidku_adjustments_${user.user_id}`, JSON.stringify(updatedAdjustments));
+      }
+      setAdjustments(updatedAdjustments);
       setShowModal(false);
       loadData();
     } catch (err) {
-      console.error('Error saving budget:', err);
-      setError(err.response?.data?.message || 'Failed to save budget');
+      setError(err.response?.data?.message || 'An error occurred while saving the budget.');
     }
   };
 
-  const handleDelete = async (id) => {
+  const handleDelete = async (budget_id) => {
     if (window.confirm('Are you sure you want to delete this budget?')) {
       try {
-        const target = budgets.find(b => b.id === id);
-        await api.delete(`/budgets/${id}`);
+        const target = budgets.find(b => b.budget_id === budget_id);
+        await api.delete(`/budgets/${budget_id}`);
 
-        if (target) {
+        if (target && user) {
           const todayStr = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
           const newAdjustment = {
             date: todayStr,
-            category: target.name,
+            category: target.category_name,
             previousLimit: target.limit,
             newLimit: 0,
             change: -target.limit,
             changeClass: 'text-error'
           };
           const updatedAdjustments = [newAdjustment, ...adjustments];
-          saveAdjustments(updatedAdjustments);
+          localStorage.setItem(`duidku_adjustments_${user.user_id}`, JSON.stringify(updatedAdjustments));
+          setAdjustments(updatedAdjustments);
         }
 
         loadData();
       } catch (err) {
-        console.error('Error deleting budget:', err);
-        alert(err.response?.data?.message || 'Failed to delete budget');
+        console.error('Failed to delete budget:', err);
+        setError('Failed to delete the budget.');
       }
     }
   };
@@ -243,17 +256,17 @@ export default function Budgets() {
           const pct = Math.min(b.percentage, 100);
           const warn = b.percentage >= 100;
           return (
-            <div key={b.id} className={`budget-card ${warn ? 'card-warning' : ''}`}>
+            <div key={b.budget_id} className={`budget-card ${warn ? 'card-warning' : ''}`}>
               <div className="budget-card-header">
                 <div>
-                  <h3 className="budget-card-name">{b.name}</h3>
-                  <p className="budget-card-period">{b.period.toUpperCase()}</p>
+                  <h3 className="budget-card-name">{b.category_name}</h3>
+                  <p className="budget-card-period">{b.type.toUpperCase()}</p>
                 </div>
                 <div className="budget-card-actions">
                   <button className="icon-btn" onClick={() => openEdit(b)} style={{ marginRight: '4px' }}>
                     <span className="material-symbols-outlined">edit</span>
                   </button>
-                  <button className="icon-btn text-tertiary" onClick={() => handleDelete(b.id)}>
+                  <button className="icon-btn text-tertiary" onClick={() => handleDelete(b.budget_id)}>
                     <span className="material-symbols-outlined">delete</span>
                   </button>
                 </div>
@@ -270,7 +283,7 @@ export default function Budgets() {
               <div className="budget-card-status" style={{ marginTop: '8px' }}>
                 <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                   <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>{b.icon}</span>
-                  {b.name}
+                  {b.category_name}
                 </span>
                 <span className={warn ? 'text-tertiary' : ''} style={{ fontWeight: 600 }}>{b.status}</span>
               </div>
@@ -345,18 +358,18 @@ export default function Budgets() {
                   <label className="form-label">Budget Name (Category)</label>
                   <select 
                     className="form-input" 
-                    value={form.name} 
-                    onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+                    value={form.category_id} 
+                    onChange={e => setForm(f => ({ ...f, category_id: e.target.value }))}
                   >
-                    {categories.map(c => <option key={c} value={c}>{c}</option>)}
+                    {categories.map(c => <option key={c.category_id || c.id} value={c.category_id || c.id}>{c.category_name}</option>)}
                   </select>
                 </div>
                 <div className="form-group">
                   <label className="form-label">Period</label>
                   <select 
                     className="form-input" 
-                    value={form.period} 
-                    onChange={e => setForm(f => ({ ...f, period: e.target.value }))}
+                    value={form.type} 
+                    onChange={e => setForm(f => ({ ...f, type: e.target.value }))}
                   >
                     <option value="daily">Daily</option>
                     <option value="weekly">Weekly</option>
