@@ -1,0 +1,308 @@
+/* Auth Pages CSS - Premium Styling matching Duidku Design */
+
+.auth-page {
+  min-height: 100vh;
+  background-color: #f8f9ff;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow-x: hidden;
+  color: #0b1c30;
+}
+
+.auth-header {
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 16px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 50;
+}
+
+.auth-brand {
+  font-family: 'Hanken Grotesk', system-ui, sans-serif;
+  font-size: 24px;
+  font-weight: 700;
+  color: #0b1c30;
+  letter-spacing: -0.01em;
+}
+
+.auth-header-link {
+  font-size: 14px;
+  font-weight: 600;
+  color: #76777d;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.auth-header-link:hover {
+  color: #000000;
+  text-decoration: underline;
+}
+
+.auth-main {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 16px 48px;
+  z-index: 10;
+}
+
+.auth-card-wrapper {
+  width: 100%;
+  max-width: 440px;
+}
+
+.auth-brand-center {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.auth-brand-title {
+  font-family: 'Hanken Grotesk', system-ui, sans-serif;
+  font-size: 32px;
+  font-weight: 700;
+  color: #0b1c30;
+  margin: 0;
+}
+
+.auth-card {
+  background-color: #ffffff;
+  border: 1px solid #c6c6cd;
+  border-radius: 8px;
+  padding: 32px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.auth-card-header {
+  margin-bottom: 24px;
+}
+
+.auth-card-title {
+  font-family: 'Hanken Grotesk', system-ui, sans-serif;
+  font-size: 24px;
+  font-weight: 600;
+  color: #0b1c30;
+  margin: 0 0 4px 0;
+}
+
+.auth-card-subtitle {
+  font-size: 14px;
+  color: #45464d;
+  margin: 0;
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.auth-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.auth-label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.auth-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #45464d;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.auth-link-forgot {
+  font-size: 14px;
+  font-weight: 600;
+  color: #000000;
+  text-decoration: none;
+}
+
+.auth-link-forgot:hover {
+  text-decoration: underline;
+}
+
+.auth-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.auth-input-icon {
+  position: absolute;
+  left: 16px;
+  color: #76777d;
+  pointer-events: none;
+  font-size: 20px;
+  transition: color 0.2s;
+  font-family: 'Material Symbols Outlined';
+}
+
+.auth-input {
+  width: 100%;
+  background-color: #ffffff;
+  border: 1px solid #c6c6cd;
+  border-radius: 8px;
+  padding: 12px 16px 12px 44px;
+  font-family: 'Inter', sans-serif;
+  font-size: 16px;
+  color: #0b1c30;
+  transition: border-color 0.2s;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.auth-input:focus {
+  border-color: #000000;
+}
+
+/* Icon focus styles */
+.auth-input:focus ~ .auth-input-icon {
+  color: #000000;
+}
+
+.auth-btn-submit {
+  width: 100%;
+  background-color: #000000;
+  color: #ffffff;
+  font-family: 'Inter', sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  padding: 12px 24px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  transition: opacity 0.2s, background-color 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.auth-btn-submit:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.auth-btn-submit:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.auth-footer {
+  text-align: center;
+  margin-top: 24px;
+}
+
+.auth-footer-text {
+  font-size: 14px;
+  color: #45464d;
+  margin: 0;
+}
+
+.auth-footer-link {
+  font-weight: 600;
+  color: #000000;
+  text-decoration: none;
+}
+
+.auth-footer-link:hover {
+  text-decoration: underline;
+}
+
+/* Background elements */
+.auth-bg-patterns {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.auth-bg-pattern-1 {
+  position: absolute;
+  top: -10%;
+  right: -10%;
+  width: 40%;
+  height: 40%;
+  opacity: 0.03;
+}
+
+.auth-bg-pattern-2 {
+  position: absolute;
+  bottom: -10%;
+  left: -10%;
+  width: 40%;
+  height: 40%;
+  opacity: 0.03;
+}
+
+.auth-error-banner {
+  background-color: #ffdad6;
+  color: #93000a;
+  border: 1px solid #ba1a1a;
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  font-size: 14px;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.strength-bar-container {
+  width: 100%;
+  height: 4px;
+  background-color: #e5eeff;
+  border-radius: 9999px;
+  margin-top: 4px;
+  overflow: hidden;
+}
+
+.strength-bar-fill {
+  height: 100%;
+  width: 0%;
+  transition: width 0.3s ease, background-color 0.3s ease;
+}
+
+.strength-text {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.strength-weak {
+  background-color: #ba1a1a;
+  color: #ba1a1a;
+}
+
+.strength-medium {
+  background-color: #92002a;
+  color: #92002a;
+}
+
+.strength-strong {
+  background-color: #006c49;
+  color: #006c49;
+}
