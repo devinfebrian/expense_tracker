@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import Layout from '../components/Layout'
 
-export default function Budgets() {
+export default function Budgets({ onLogout }) {
   const [budgets, setBudgets] = useState([])
   const [adjustments, setAdjustments] = useState([])
   const [showModal, setShowModal] = useState(false)
@@ -49,7 +49,7 @@ export default function Budgets() {
   const totalSpent = budgets.reduce((s, b) => s + b.spent, 0)
 
   return (
-    <Layout>
+    <Layout onLogout={onLogout}>
       <div className="page-header">
         <div>
           <h1 className="page-title">Budget Management</h1>
@@ -164,7 +164,7 @@ export default function Budgets() {
                 <div className="form-group">
                   <label className="form-label">Category</label>
                   <select className="form-input" value={form.category} onChange={e => setForm(f => ({...f, category: e.target.value}))}>
-                    {categories.map(c => <option key={c}>{c}</option>)}
+                    {categories.map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
                 </div>
               </div>

@@ -1,22 +1,21 @@
 import { useState, useEffect } from 'react'
 import Layout from '../components/Layout'
 
-export default function Transactions() {
-  const [transactions, setTransactions] = useState([])
+export default function HistoryExpense({ onLogout }) {
+  const [expenses, setExpenses] = useState([])
   const [filterPeriod, setFilterPeriod] = useState('all')
   const [filterCat, setFilterCat] = useState('all')
   const [showModal, setShowModal] = useState(false)
   const [editing, setEditing] = useState(null)
   const [form, setForm] = useState({ merchant: '', category: 'Food', amount: '', date: '', notes: '' })
-  const [summary, setSummary] = useState({ total: 0, count: 0 })
   const categories = ['Food', 'Transport', 'Shopping', 'Bills', 'Entertainment', 'Housing', 'Others']
 
   const fetchTxns = () => {
-    fetch('/api/transactions').then(r => r.json()).then(setTransactions)
+    fetch('/api/history-expense').then(r => r.json()).then(setExpenses).catch(() => {})
   }
   useEffect(() => { fetchTxns() }, [])
 
-  const filtered = transactions.filter(t => {
+  const filtered = expenses.filter(t => {
     if (filterCat !== 'all' && t.category !== filterCat) return false
     if (filterPeriod === 'all') return true
     const d = new Date(t.date)
@@ -29,9 +28,10 @@ export default function Transactions() {
     return true
   })
 
-  useEffect(() => {
-    setSummary({ total: filtered.reduce((s,t) => s + t.amount, 0), count: filtered.length })
-  }, [filtered])
+  const summary = {
+    total: filtered.reduce((s, t) => s + t.amount, 0),
+    count: filtered.length
+  }
 
   const openAdd = () => {
     setEditing(null)
@@ -48,18 +48,22 @@ export default function Transactions() {
   const handleSave = async (e) => {
     e.preventDefault()
     const body = { ...form, amount: parseFloat(form.amount) }
-    if (editing) {
-      await fetch(`/api/transactions/${editing.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
-    } else {
-      await fetch('/api/transactions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
-    }
-    setShowModal(false)
-    fetchTxns()
+    try {
+      if (editing) {
+        await fetch(`/api/history-expense/${editing.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+      } else {
+        await fetch('/api/history-expense', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+      }
+      setShowModal(false)
+      fetchTxns()
+    } catch {}
   }
 
   const handleDelete = async (id) => {
-    await fetch(`/api/transactions/${id}`, { method: 'DELETE' })
-    fetchTxns()
+    try {
+      await fetch(`/api/history-expense/${id}`, { method: 'DELETE' })
+      fetchTxns()
+    } catch {}
   }
 
   const periods = [
@@ -72,7 +76,7 @@ export default function Transactions() {
   ]
 
   return (
-    <Layout>
+    <Layout onLogout={onLogout}>
       <div className="page-header">
         <div>
           <h1 className="page-title">History Expense</h1>
@@ -162,7 +166,7 @@ export default function Transactions() {
                 <div className="form-group">
                   <label className="form-label">Category</label>
                   <select className="form-input" value={form.category} onChange={e => setForm(f => ({...f, category: e.target.value}))}>
-                    {categories.map(c => <option key={c}>{c}</option>)}
+                    {categories.map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
                 </div>
               </div>

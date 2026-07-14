@@ -11,5 +11,5 @@ app.use(express.json());
 app.use('/api', apiRoutes);
 
 app.listen(PORT, () => {
-  console.log(`WealthFlow API running at http://localhost:${PORT}`);
+  console.log(`DUIDKU API running at http://localhost:${PORT}`);
 });

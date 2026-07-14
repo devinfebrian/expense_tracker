@@ -1,7 +1,7 @@
 export default function Topbar() {
   return (
     <header className="topbar">
-      <h2 className="topbar-title-mobile">WealthFlow</h2>
+      <h2 className="topbar-title-mobile">DUIDKU</h2>
       <div className="topbar-search">
         <span className="material-symbols-outlined">search</span>
         <input type="text" placeholder="Search transactions..." className="topbar-search-input" />

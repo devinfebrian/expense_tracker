@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 
 export default function Login({ onLogin }) {
   const [tab, setTab] = useState('login')
@@ -7,7 +6,6 @@ export default function Login({ onLogin }) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
-  const navigate = useNavigate()
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -32,7 +30,6 @@ export default function Login({ onLogin }) {
     const data = await res.json()
     if (!res.ok) return setError(data.error)
     onLogin(data)
-    navigate('/')
   }
 
   return (
@@ -42,8 +39,8 @@ export default function Login({ onLogin }) {
           <div className="auth-logo">
             <span className="material-symbols-outlined">account_balance_wallet</span>
           </div>
-          <h1 className="auth-brand-name">WealthFlow</h1>
-          <p className="auth-brand-sub">Enterprise Finance</p>
+          <h1 className="auth-brand-name">DUIDKU</h1>
+          <p className="auth-brand-sub">Expense Tracker</p>
         </div>
         <div className="auth-card">
           <div className="auth-tabs">

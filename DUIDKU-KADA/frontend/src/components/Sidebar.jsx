@@ -1,15 +1,20 @@
-import { Link, useLocation } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 
-export default function Sidebar() {
+export default function Sidebar({ onLogout }) {
   const { pathname } = useLocation()
+  const navigate = useNavigate()
 
   const links = [
     { href: '/', icon: 'dashboard', label: 'Overview' },
-    { href: '/transactions', icon: 'receipt_long', label: 'History Expense' },
+    { href: '/history-expense', icon: 'receipt_long', label: 'History Expense' },
     { href: '/budgets', icon: 'account_balance_wallet', label: 'Budgets' },
-    { href: '#', icon: 'category', label: 'Categories' },
-    { href: '#', icon: 'monitoring', label: 'Reports' },
   ]
+
+  const handleSignOut = (e) => {
+    e.preventDefault()
+    onLogout()
+    navigate('/login')
+  }
 
   return (
     <aside className="sidebar">
@@ -18,25 +23,21 @@ export default function Sidebar() {
           <span className="material-symbols-outlined">account_balance_wallet</span>
         </div>
         <div>
-          <h1 className="sidebar-title">WealthFlow</h1>
-          <p className="sidebar-subtitle">Enterprise Finance</p>
+          <h1 className="sidebar-title">DUIDKU</h1>
+          <p className="sidebar-subtitle">Expense Tracker</p>
         </div>
       </div>
       <nav className="sidebar-nav">
         {links.map(l => (
-          <Link key={l.href} to={l.href} className={`sidebar-link ${pathname === l.href ? 'active' : ''}`}>
+          <button key={l.href} onClick={() => navigate(l.href)} className={`sidebar-link ${pathname === l.href ? 'active' : ''}`}>
             <span className="material-symbols-outlined">{l.icon}</span>
             <span>{l.label}</span>
-          </Link>
+          </button>
         ))}
       </nav>
       <div className="sidebar-footer">
-        <button className="btn-primary sidebar-btn">Add Transaction</button>
-        <a href="#" className="sidebar-link">
-          <span className="material-symbols-outlined">help</span>
-          <span>Help Center</span>
-        </a>
-        <a href="#" className="sidebar-link">
+        <button className="btn-primary sidebar-btn" onClick={() => navigate('/history-expense')}>Add Transaction</button>
+        <a href="#" onClick={handleSignOut} className="sidebar-link">
           <span className="material-symbols-outlined">logout</span>
           <span>Sign Out</span>
         </a>

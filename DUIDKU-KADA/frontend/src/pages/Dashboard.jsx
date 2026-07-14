@@ -1,14 +1,15 @@
 import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import Layout from '../components/Layout'
 
-export default function Dashboard() {
+export default function Dashboard({ onLogout }) {
+  const navigate = useNavigate()
   const [data, setData] = useState({ summary: {}, transactions: [], budgets: [] })
 
   useEffect(() => {
     Promise.all([
       fetch('/api/summary').then(r => r.json()),
-      fetch('/api/transactions').then(r => r.json()),
+      fetch('/api/history-expense').then(r => r.json()),
       fetch('/api/budgets').then(r => r.json()),
     ]).then(([summary, transactions, budgets]) => setData({ summary, transactions, budgets }))
   }, [])
@@ -16,7 +17,7 @@ export default function Dashboard() {
   const { summary, transactions, budgets } = data
 
   return (
-    <Layout>
+    <Layout onLogout={onLogout}>
       <div className="page-header">
         <div>
           <h1 className="page-title">Expense Overview</h1>
@@ -27,7 +28,7 @@ export default function Dashboard() {
             <span className="material-symbols-outlined">calendar_month</span>
             <span className="btn-text">This Month</span>
           </button>
-          <Link to="/budgets" className="btn-primary">Set Budget</Link>
+          <button onClick={() => navigate('/budgets')} className="btn-primary">Set Budget</button>
         </div>
       </div>
       <div className="dashboard-grid">
@@ -107,7 +108,7 @@ export default function Dashboard() {
         <div className="chart-card col-span-5">
           <div className="chart-header">
             <h4 className="chart-title">Budget Health</h4>
-            <Link to="/budgets" className="chart-link">Manage</Link>
+            <button onClick={() => navigate('/budgets')} className="chart-link">Manage</button>
           </div>
           <div className="budget-list">
             {budgets.map(b => (
@@ -133,7 +134,7 @@ export default function Dashboard() {
         <div className="chart-card col-span-7">
           <div className="chart-header">
             <h4 className="chart-title">Recent Expenses</h4>
-            <Link to="/transactions" className="chart-link">View All</Link>
+            <button onClick={() => navigate('/history-expense')} className="chart-link">View All</button>
           </div>
           <div className="table-wrapper">
             <table className="data-table">
@@ -166,7 +167,7 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
-      <button className="fab">+</button>
+      <button className="fab" onClick={() => navigate('/history-expense')}>+</button>
     </Layout>
   )
 }

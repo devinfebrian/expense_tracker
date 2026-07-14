@@ -2,17 +2,23 @@ const express = require('express');
 const router = express.Router();
 const { transactions, budgets, budgetAdjustments, summary } = require('../data/mock-data');
 
-router.get('/transactions', (req, res) => {
+router.get('/history-expense', (req, res) => {
   res.json(transactions);
 });
 
-router.get('/transactions/:id', (req, res) => {
+router.get('/history-expense/:id', (req, res) => {
   const txn = transactions.find(t => t.id === parseInt(req.params.id));
   if (!txn) return res.status(404).json({ error: 'Transaction not found' });
   res.json(txn);
 });
 
-router.put('/transactions/:id', (req, res) => {
+router.post('/history-expense', (req, res) => {
+  const txn = { id: Date.now(), ...req.body };
+  transactions.push(txn);
+  res.status(201).json(txn);
+});
+
+router.put('/history-expense/:id', (req, res) => {
   const id = parseInt(req.params.id);
   const idx = transactions.findIndex(t => t.id === id);
   if (idx === -1) return res.status(404).json({ error: 'Transaction not found' });
@@ -20,7 +26,7 @@ router.put('/transactions/:id', (req, res) => {
   res.json(transactions[idx]);
 });
 
-router.delete('/transactions/:id', (req, res) => {
+router.delete('/history-expense/:id', (req, res) => {
   const id = parseInt(req.params.id);
   const idx = transactions.findIndex(t => t.id === id);
   if (idx === -1) return res.status(404).json({ error: 'Transaction not found' });
