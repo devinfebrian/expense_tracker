@@ -99,3 +99,26 @@ export const getPrevPeriod = (period, type) => {
   dayBeforeStart.setUTCMinutes(dayBeforeStart.getUTCMinutes() - 1);
   return getCurrentPeriod(type, dayBeforeStart);
 };
+
+// Returns array of 12 monthly period strings ending at `period` (inclusive).
+// Oldest first, selected last. Used for the spending-trends bar chart.
+export const getMonthlyWindow = (period, count = 12) => {
+  const months = [];
+  let cur = period;
+  for (let i = 0; i < count; i++) {
+    months.unshift(cur);
+    cur = getPrevPeriod(cur, 'monthly');
+  }
+  return months;
+};
+
+const SHORT_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+export const getShortMonthLabel = (period) => {
+  if (!period) return '';
+  const parts = period.split('-');
+  if (parts.length === 2) {
+    return SHORT_MONTHS[Number(parts[1]) - 1];
+  }
+  return formatPeriodLabel(period);
+};

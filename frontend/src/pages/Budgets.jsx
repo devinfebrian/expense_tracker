@@ -6,6 +6,7 @@ import { useAuthStore } from '../store/useAuthStore';
 import { useBudgetStore } from '../store/useBudgetStore';
 import { useTransactionStore } from '../store/useTransactionStore';
 import { getCurrentPeriod, getPeriodRange, formatPeriodLabel, getPrevPeriod, getNextPeriod } from '../utils/period';
+import getCategoryIcon from '../utils/categoryIcon';
 
 export default function Budgets() {
   const user = useAuthStore(state => state.user);
@@ -33,17 +34,6 @@ export default function Budgets() {
     loadCategories();
   }, [loadBudgets, loadTransactions, loadCategories, user, selectedPeriod]);
 
-  const getBudgetIcon = (name) => {
-    const n = name?.toLowerCase() || '';
-    if (n.includes('food') || n.includes('drinks') || n.includes('meals') || n.includes('restaurant')) return 'restaurant';
-    if (n.includes('transport') || n.includes('taxi') || n.includes('bus') || n.includes('car')) return 'directions_car';
-    if (n.includes('education') || n.includes('books') || n.includes('school')) return 'school';
-    if (n.includes('living') || n.includes('rent') || n.includes('dorm') || n.includes('housing')) return 'home';
-    if (n.includes('personal') || n.includes('entertainment') || n.includes('shopping') || n.includes('movie') || n.includes('games')) return 'celebration';
-    return 'account_balance_wallet';
-  };
-
-  // Compute spent dynamically per budget using its own period range.
   const calculatedBudgets = budgets.map(b => {
     const range = getPeriodRange(b.period);
     const categoryTxns = transactions.filter(t => {
@@ -71,7 +61,7 @@ export default function Budgets() {
       percentage,
       status,
       statusClass,
-      icon: b.icon || getBudgetIcon(b.category_name)
+      icon: b.icon || getCategoryIcon(b.category_name)
     };
   });
 
