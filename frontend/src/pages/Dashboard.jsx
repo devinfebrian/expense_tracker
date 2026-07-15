@@ -42,7 +42,7 @@ function SpendingTrendsChart({ labels, totals }) {
         </div>
       </div>
 
-      <div className="line-chart-container" style={{ position: 'relative', minHeight: '220px', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', marginTop: '16px' }}>
+      <div className="line-chart-container" style={{ position: 'relative', minHeight: '220px', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', marginTop: '16px', flex: 1 }}>
         <div className="line-chart-yaxis" style={{ position: 'absolute', left: 0, top: 0, bottom: '24px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', fontSize: '11px', fontWeight: '600', color: 'var(--text-secondary)', width: '60px', zIndex: 1 }}>
           {[100, 75, 50, 25, 0].map(pct => (
             <span key={pct} style={{ textAlign: 'left' }}>
@@ -442,15 +442,6 @@ export default function Dashboard() {
           trendText="from last month"
         />
         <SummaryCard
-          label="Top Category"
-          value={topCategory ? topCategory.label : 'No expenses'}
-          icon="category"
-          iconBg="var(--tertiary-light)"
-          iconColor="var(--tertiary)"
-          trend={topCategory ? `${topCategory.pct}%` : ''}
-          trendText={topCategory ? `${formatCurrency(topCategory.amount)} spent` : ''}
-        />
-        <SummaryCard
           label="Remaining Budget"
           value={formatCurrency(remainingBudget)}
           icon="account_balance_wallet"
@@ -462,8 +453,8 @@ export default function Dashboard() {
       </div>
 
       {/* Charts Row */}
-      <div className="dashboard-grid" style={{ marginBottom: 'var(--gutter)' }}>
-        <div className="chart-card col-span-8">
+      <div className="dashboard-grid" style={{ marginBottom: 'var(--gutter)', alignItems: 'stretch' }}>
+        <div className="chart-card col-span-8" style={{ display: 'flex', flexDirection: 'column' }}>
           <SpendingTrendsChart
             labels={dailyLabels}
             totals={dailyTotals}
