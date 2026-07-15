@@ -1,13 +1,21 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Sidebar from './Sidebar';
 import Topbar from './Topbar';
 
 export default function Layout({ children }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    const saved = localStorage.getItem('sidebarCollapsed');
+    return saved ? JSON.parse(saved) : false;
+  });
+
+  useEffect(() => {
+    localStorage.setItem('sidebarCollapsed', JSON.stringify(sidebarCollapsed));
+  }, [sidebarCollapsed]);
 
   return (
     <div className="app-layout">
-      <Sidebar />
+      <Sidebar collapsed={sidebarCollapsed} onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)} />
       {mobileMenuOpen && (
         <div
           className="mobile-sidebar-overlay"
@@ -33,7 +41,7 @@ export default function Layout({ children }) {
         }}
       >
         <div className="mobile-sidebar-inner">
-          <Sidebar />
+          <Sidebar collapsed={false} onToggleCollapse={() => {}} />
         </div>
       </div>
       <div className="main-area">

@@ -534,7 +534,7 @@ export default function Dashboard() {
 
       {/* Bottom Row */}
       <div className="dashboard-grid" style={{ alignItems: 'stretch' }}>
-        <div className="chart-card col-span-7" style={{ display: 'flex', flexDirection: 'column' }}>
+        <div className="chart-card col-span-8" style={{ display: 'flex', flexDirection: 'column' }}>
           <div className="chart-header">
             <h4 className="chart-title">Recent Transactions</h4>
             <Link to="/transactions" className="chart-link">
@@ -569,7 +569,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="chart-card col-span-5" style={{ display: 'flex', flexDirection: 'column' }}>
+        <div className="chart-card col-span-4" style={{ display: 'flex', flexDirection: 'column' }}>
           <div className="chart-header">
             <h4 className="chart-title">Budget Overview</h4>
             <Link to="/budgets" className="chart-link">
