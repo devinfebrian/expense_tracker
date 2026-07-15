@@ -57,7 +57,7 @@ export default function Sidebar() {
         )}
       </nav>
       <div className="sidebar-footer">
-        {bottomLinks.map(l =>
+        {bottomLinks.map(l => (
           l.disabled ? (
             <span key={l.label} className="sidebar-link" style={{ opacity: 0.5, cursor: 'not-allowed' }}>
               <span className="material-symbols-outlined">{l.icon}</span>
@@ -69,7 +69,7 @@ export default function Sidebar() {
               <span>{l.label}</span>
             </Link>
           )
-        )}
+        ))}
         <button onClick={handleLogout} className="sidebar-btn">
           <span className="material-symbols-outlined">logout</span>
           <span>Log out</span>

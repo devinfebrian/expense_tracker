@@ -467,6 +467,7 @@ export default function Dashboard() {
           <SpendingTrendsChart
             labels={dailyLabels}
             totals={dailyTotals}
+            selectedPeriod={selectedPeriod}
           />
         </div>
 
