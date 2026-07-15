@@ -1,6 +1,14 @@
 import { useState, useEffect } from 'react';
 import Modal from './Modal';
 
+// Helper function to format number string as Rupiah thousands (e.g. 1.000.000)
+const formatRupiah = (value) => {
+  if (!value) return '';
+  const clean = value.toString().replace(/\D/g, '');
+  if (!clean) return '';
+  return parseInt(clean, 10).toLocaleString('id-ID');
+};
+
 export default function TransactionModal({
   isOpen,
   editingItem,
@@ -21,7 +29,7 @@ export default function TransactionModal({
       setForm({
         merchant: editingItem.merchant,
         category_id: editingItem.category_id,
-        amount: editingItem.amount.toString(),
+        amount: formatRupiah(editingItem.amount.toString()),
         date: editingItem.date,
         notes: editingItem.notes || ''
       });
@@ -40,7 +48,11 @@ export default function TransactionModal({
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSave(form);
+    const cleanAmount = form.amount.toString().replace(/\D/g, '');
+    onSave({
+      ...form,
+      amount: parseFloat(cleanAmount) || 0
+    });
   };
 
   return (
@@ -79,11 +91,13 @@ export default function TransactionModal({
             <label className="form-label">Amount (Rp)</label>
             <input 
               className="form-input" 
-              type="number" 
-              min="0" 
-              step="0.01" 
+              type="text" 
+              inputMode="numeric"
               value={form.amount} 
-              onChange={e => setForm(f => ({ ...f, amount: e.target.value }))} 
+              onChange={e => {
+                const formatted = formatRupiah(e.target.value);
+                setForm(f => ({ ...f, amount: formatted }));
+              }} 
               required 
             />
           </div>
