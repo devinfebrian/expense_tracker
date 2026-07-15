@@ -29,6 +29,10 @@ const userSchema = new mongoose.Schema({
     minlength: 8,
     select: false,
   },
+  avatar: {
+    type: String,
+    default: '/avatars/avatar1.svg',
+  },
 }, {
   timestamps: true,
 });

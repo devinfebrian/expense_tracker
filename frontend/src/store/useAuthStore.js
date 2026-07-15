@@ -33,8 +33,8 @@ export const useAuthStore = create((set) => ({
     set({ user: null });
   },
 
-  updateProfile: async (name, email) => {
-    const res = await api.put('/auth/profile', { name, email });
+  updateProfile: async (name, email, avatar) => {
+    const res = await api.put('/auth/profile', { name, email, avatar });
     set({ user: res.data.data.user });
     return res.data.data.user;
   },

@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import api from '../api/axios.js';
 
-export const useTransactionStore = create((set, get) => ({
+export const useTransactionStore = create((set) => ({
   transactions: [],
   categories: [],
   loading: false,

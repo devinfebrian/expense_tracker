@@ -20,6 +20,7 @@ export default function Profile() {
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [selectedAvatar, setSelectedAvatar] = useState('/avatars/avatar1.svg');
 
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -39,6 +40,9 @@ export default function Profile() {
     if (user) {
       setName(user.name || '');
       setEmail(user.email || '');
+      if (user.avatar) {
+        setSelectedAvatar(user.avatar);
+      }
     }
   }, [user]);
 
@@ -52,7 +56,7 @@ export default function Profile() {
       if (!name.trim() || !email.trim()) {
         throw new Error('Name and email are required');
       }
-      await updateProfile(name, email);
+      await updateProfile(name, email, selectedAvatar);
       setProfileSuccess('Profile details updated successfully.');
     } catch (err) {
       setProfileError(err.response?.data?.message || err.message || 'Failed to update profile details.');
@@ -98,11 +102,24 @@ export default function Profile() {
           <div className="profile-sidebar">
             <section className="profile-identity-card">
               <div className="profile-avatar-container" style={{ marginBottom: 16 }}>
-                <img
+                <div
                   className="profile-avatar-img"
-                  src="/avatar.png"
-                  alt="Professional User Avatar"
-                />
+                  style={{
+                    width: '128px',
+                    height: '128px',
+                    borderRadius: '50%',
+                    overflow: 'hidden',
+                    margin: '0 auto',
+                    border: '4px solid var(--surface)',
+                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)',
+                  }}
+                >
+                  <img
+                    src={selectedAvatar}
+                    alt="Current Avatar Preview"
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  />
+                </div>
               </div>
               <h2 className="profile-name">{user?.name || 'User Account'}</h2>
               <p style={{ fontSize: 13, color: 'var(--outline)', margin: 0, marginBottom: 24 }}>{user?.email}</p>
@@ -171,6 +188,33 @@ export default function Profile() {
                       onChange={(e) => setEmail(e.target.value)}
                       required
                     />
+                  </div>
+                </div>
+
+                <div style={{ marginBottom: '24px', marginTop: '16px' }}>
+                  <label className="form-label" style={{ display: 'block', marginBottom: '12px', fontWeight: 600 }}>Choose Profile Avatar</label>
+                  <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', alignItems: 'center' }}>
+                    {['/avatars/avatar1.svg', '/avatars/avatar2.svg', '/avatars/avatar3.svg', '/avatars/avatar4.svg', '/avatars/avatar5.svg', '/avatars/avatar6.svg'].map((av) => (
+                      <button
+                        key={av}
+                        type="button"
+                        onClick={() => setSelectedAvatar(av)}
+                        style={{
+                          width: '64px',
+                          height: '64px',
+                          borderRadius: '50%',
+                          overflow: 'hidden',
+                          border: selectedAvatar === av ? '3px solid var(--secondary)' : '1px solid var(--outline-variant)',
+                          padding: 0,
+                          cursor: 'pointer',
+                          transform: selectedAvatar === av ? 'scale(1.08)' : 'scale(1)',
+                          transition: 'all 0.2s ease',
+                          boxShadow: selectedAvatar === av ? '0 4px 10px rgba(0, 108, 73, 0.2)' : 'none',
+                        }}
+                      >
+                        <img src={av} alt="Avatar option" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      </button>
+                    ))}
                   </div>
                 </div>
 

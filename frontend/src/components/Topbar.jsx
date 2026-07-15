@@ -1,17 +1,35 @@
-export default function Topbar() {
+import { Link } from 'react-router-dom';
+import { useAuth } from '../hooks/useAuth.js';
+
+export default function Topbar({ onMenuClick }) {
+  const { user } = useAuth();
+  const displayName = user?.name || 'User';
+  const initials = displayName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+
   return (
     <header className="topbar">
-      <h2 className="topbar-title-mobile">Duidku</h2>
+      <div className="topbar-left">
+        <button className="menu-btn" onClick={onMenuClick} aria-label="Open menu">
+          <span className="material-symbols-outlined">menu</span>
+        </button>
+        <h2 className="topbar-title-mobile">Duidku</h2>
+      </div>
       <div className="topbar-actions">
-        <button className="topbar-icon-btn">
+        <button className="topbar-icon-btn" aria-label="Notifications">
           <span className="material-symbols-outlined">notifications</span>
+          <span className="badge" />
         </button>
-        <button className="topbar-icon-btn">
-          <span className="material-symbols-outlined">settings</span>
-        </button>
-        <div className="topbar-avatar">
-          <img src="https://lh3.googleusercontent.com/aida-public/AB6AXuDJFhBfqA9PUwyURg3ntS0_eG7AluQGT5cLnFpi0ZO28YanLpt261uwboIB2uXmVfabZMvBEzZgUqi35Lq6Yb3jUyWqZF7ohTLINg76OEnC8kRQQi1kpvd5PCA62h4JkG2lOIgBeyftOHXaPTR1nthibQRJLpnMU2EWcE4YyeI1dohyMS0APasVi5yGX5D1Htvyg2tDrL7XM-oTU2KXV-rdwXUaucDLlna9lRzsD2-UYPPlpSfjIgmgz1T4AjWowYkMLVQni82bFP8" alt="Profile" />
-        </div>
+        <Link to="/profile" className="topbar-profile" style={{ textDecoration: 'none', color: 'inherit', display: 'flex', alignItems: 'center' }}>
+          <span className="topbar-profile-name">{displayName}</span>
+          <div className="topbar-avatar">
+            {user?.avatar ? (
+              <img src={user.avatar} alt={displayName} />
+            ) : (
+              <span className="avatar-fallback">{initials}</span>
+            )}
+          </div>
+          <span className="material-symbols-outlined" style={{ fontSize: 18, color: 'var(--text-secondary)' }}>expand_more</span>
+        </Link>
       </div>
     </header>
   );
