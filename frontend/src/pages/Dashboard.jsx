@@ -9,11 +9,6 @@ import { useAuthStore } from '../store/useAuthStore';
 import { getPeriodRange, getCurrentPeriod, getPrevPeriod, getNextPeriod, formatPeriodLabel } from '../utils/period';
 import { getCategoryStyle } from '../utils/categoryIcon';
 
-const isIncomeCategory = (cat) => {
-  const c = cat?.toLowerCase() || '';
-  return ['salary', 'income', 'wage', 'freelance'].some(k => c.includes(k));
-};
-
 const formatCurrency = (n) => `Rp${Number(n || 0).toLocaleString('id-ID')}`;
 
 const formatPeriodRange = (period) => {
@@ -197,41 +192,39 @@ export default function Dashboard() {
 
   const loading = loadingTxns || loadingBudgets;
 
-    const {
-      totalExpenses,
-      periodExpenses,
-      todaySpent,
-      todayCount,
-      expenseChange,
-      expenseTxns,
-      categoryBreakdown,
-      recentTransactions,
-      budgetOverview,
-      dailyLabels,
-      dailyTotals,
-    } = useMemo(() => {
+  const {
+    totalExpenses,
+    transactionCount,
+    topCategory,
+    remainingBudget,
+    budgetLimit,
+    budgetUtilization,
+    expenseChange,
+    transactionCountChange,
+    categoryBreakdown,
+    recentTransactions,
+    budgetOverview,
+    dailyLabels,
+    dailyTotals,
+  } = useMemo(() => {
     const range = getPeriodRange(selectedPeriod);
     const prevRange = getPeriodRange(getPrevPeriod(selectedPeriod, 'monthly'));
-
-    const allExpenses = transactions.filter(t => !isIncomeCategory(t.category));
-
-    const totalExpenses = allExpenses.reduce((sum, t) => sum + t.amount, 0);
 
     const periodTxns = transactions.filter(t => {
       if (!range) return false;
       const d = new Date(t.date);
       return d >= range.start && d < range.end;
     });
-    const expenseTxns = periodTxns.filter(t => !isIncomeCategory(t.category));
-
-    const periodExpenses = expenseTxns.reduce((sum, t) => sum + t.amount, 0);
+    const totalExpenses = periodTxns.reduce((sum, t) => sum + t.amount, 0);
+    const transactionCount = periodTxns.length;
 
     const prevPeriodTxns = transactions.filter(t => {
       if (!prevRange) return false;
       const d = new Date(t.date);
       return d >= prevRange.start && d < prevRange.end;
     });
-    const prevExpenses = prevPeriodTxns.filter(t => !isIncomeCategory(t.category)).reduce((sum, t) => sum + t.amount, 0);
+    const prevTotalExpenses = prevPeriodTxns.reduce((sum, t) => sum + t.amount, 0);
+    const prevTransactionCount = prevPeriodTxns.length;
 
     const pctChange = (curr, prev) => {
       if (prev > 0) return parseFloat((((curr - prev) / prev) * 100).toFixed(1));
@@ -239,24 +232,34 @@ export default function Dashboard() {
       return 0;
     };
 
-    const expenseChange = pctChange(periodExpenses, prevExpenses);
+    const expenseChange = pctChange(totalExpenses, prevTotalExpenses);
+    const transactionCountChange = pctChange(transactionCount, prevTransactionCount);
 
-    // Today's expenses
-    const today = new Date();
-    const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-    const todayEnd = new Date(todayStart.getTime() + 24 * 60 * 60 * 1000);
-    const todaySpent = expenseTxns.filter(t => {
-      const d = new Date(t.date);
-      return d >= todayStart && d < todayEnd;
-    }).reduce((sum, t) => sum + t.amount, 0);
-    const todayCount = expenseTxns.filter(t => {
-      const d = new Date(t.date);
-      return d >= todayStart && d < todayEnd;
-    }).length;
+    // Budget totals across monthly budgets for selected period
+    const monthlyBudgets = budgets.filter(b => b.type === 'monthly' && b.period === selectedPeriod);
+    const budgetLimit = monthlyBudgets.reduce((sum, b) => sum + b.limit, 0);
 
-    // Category breakdown for expenses
+    // Aggregate spending by category to avoid double-counting duplicate budgets
+    const spentByCategory = {};
+    monthlyBudgets.forEach(b => {
+      const bRange = getPeriodRange(b.period);
+      const spent = transactions
+        .filter(t => {
+          if (t.category_id !== b.category_id) return false;
+          if (!bRange) return false;
+          const d = new Date(t.date);
+          return d >= bRange.start && d < bRange.end;
+        })
+        .reduce((s, t) => s + t.amount, 0);
+      spentByCategory[b.category_id] = Math.max(spentByCategory[b.category_id] || 0, spent);
+    });
+    const budgetSpent = Object.values(spentByCategory).reduce((sum, v) => sum + v, 0);
+    const remainingBudget = Math.max(budgetLimit - budgetSpent, 0);
+    const budgetUtilization = budgetLimit > 0 ? Math.round((budgetSpent / budgetLimit) * 100) : 0;
+
+    // Category breakdown
     const categoriesMap = {};
-    expenseTxns.forEach(t => {
+    periodTxns.forEach(t => {
       const key = t.category || 'Others';
       categoriesMap[key] = (categoriesMap[key] || 0) + t.amount;
     });
@@ -273,10 +276,8 @@ export default function Dashboard() {
       .sort((a, b) => new Date(b.date) - new Date(a.date))
       .slice(0, 5);
 
-    // Budget overview
-    const monthlyPrefix = selectedPeriod;
-    const budgetOverview = budgets
-      .filter(b => b.period && b.period.startsWith(monthlyPrefix))
+    // Budget overview — only monthly budgets for selected period
+    const budgetOverview = monthlyBudgets
       .map(b => {
         const bRange = getPeriodRange(b.period);
         const categoryTxns = transactions.filter(t => {
@@ -305,7 +306,7 @@ export default function Dashboard() {
       while (cur < range.end) {
         const dayStart = new Date(cur);
         const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
-        const daySpent = expenseTxns
+        const daySpent = periodTxns
           .filter(t => {
             const d = new Date(t.date);
             return d >= dayStart && d < dayEnd;
@@ -317,13 +318,18 @@ export default function Dashboard() {
       }
     }
 
+    // Top spending category
+    const topCategory = categoryBreakdown.length > 0 ? categoryBreakdown[0] : null;
+
     return {
       totalExpenses,
-      periodExpenses,
-      todaySpent,
-      todayCount,
+      transactionCount,
+      topCategory,
+      remainingBudget,
+      budgetLimit,
+      budgetUtilization,
       expenseChange,
-      expenseTxns,
+      transactionCountChange,
       categoryBreakdown,
       recentTransactions,
       budgetOverview,
@@ -343,8 +349,6 @@ export default function Dashboard() {
     const next = getNextPeriod(selectedPeriod, 'monthly');
     if (next) setSelectedPeriod(next);
   };
-
-  // Spending overview line chart (daily)
 
   const doughnutGradient = useMemo(() => {
     if (categoryBreakdown.length === 0) {
@@ -384,7 +388,7 @@ export default function Dashboard() {
       <div className="page-header">
         <div>
           <h1 className="page-title">{greeting()}, {user?.name?.split(' ')[0] || 'User'}! 👋</h1>
-          <p className="page-subtitle">Here&apos;s what&apos;s happening with your finances today.</p>
+          <p className="page-subtitle">Here&apos;s what&apos;s happening with your expenses today.</p>
         </div>
         <div className="page-actions">
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', padding: '6px 10px' }}>
@@ -428,33 +432,42 @@ export default function Dashboard() {
           trendText="from last month"
         />
         <SummaryCard
-          label="This Month Spending"
-          value={formatCurrency(periodExpenses)}
-          icon="calendar_month"
-          iconBg="var(--secondary-light)"
-          iconColor="var(--secondary)"
-          trend={`${expenseChange >= 0 ? '+' : ''}${expenseChange}%`}
-          trendDirection={expenseChange >= 0 ? 'up' : 'down'}
+          label="Transactions"
+          value={transactionCount}
+          icon="receipt_long"
+          iconBg="var(--info-light)"
+          iconColor="var(--info)"
+          trend={`${transactionCountChange >= 0 ? '+' : ''}${transactionCountChange}%`}
+          trendDirection={transactionCountChange >= 0 ? 'up' : 'down'}
           trendText="from last month"
         />
         <SummaryCard
-          label="Today Spending"
-          value={formatCurrency(todaySpent)}
-          icon="today"
-          iconBg="var(--warning-light)"
-          iconColor="var(--warning)"
-          trend={todayCount > 0 ? `${todayCount} transaction(s)` : 'No transactions'}
-          trendDirection={todaySpent > 0 ? 'up' : 'neutral'}
+          label="Top Category"
+          value={topCategory ? topCategory.label : 'No expenses'}
+          icon="category"
+          iconBg="var(--tertiary-light)"
+          iconColor="var(--tertiary)"
+          trend={topCategory ? `${topCategory.pct}%` : ''}
+          trendText={topCategory ? `${formatCurrency(topCategory.amount)} spent` : ''}
+        />
+        <SummaryCard
+          label="Remaining Budget"
+          value={formatCurrency(remainingBudget)}
+          icon="account_balance_wallet"
+          iconBg="var(--primary-light)"
+          iconColor="var(--primary)"
+          trend={`${budgetUtilization}% used`}
+          trendText={`of ${formatCurrency(budgetLimit)} limit`}
         />
       </div>
 
       {/* Charts Row */}
-      <div className="dashboard-grid" style={{ marginBottom: 'var(--gutter)', alignItems: 'stretch' }}>
-        <div className="chart-card col-span-8" style={{ display: 'flex', flexDirection: 'column' }}>
-          <SpendingTrendsChart 
-            labels={dailyLabels} 
-            totals={dailyTotals} 
-            selectedPeriod={selectedPeriod} 
+      <div className="dashboard-grid" style={{ marginBottom: 'var(--gutter)' }}>
+        <div className="chart-card col-span-8">
+          <SpendingTrendsChart
+            labels={dailyLabels}
+            totals={dailyTotals}
+            selectedPeriod={selectedPeriod}
           />
         </div>
 
@@ -465,7 +478,7 @@ export default function Dashboard() {
           <div className="doughnut-container">
             <div className="doughnut" style={{ background: doughnutGradient }}>
               <div className="doughnut-center">
-                <span className="doughnut-value">{formatCurrency(expenseTxns.reduce((s, t) => s + t.amount, 0))}</span>
+                <span className="doughnut-value">{formatCurrency(totalExpenses)}</span>
                 <p className="doughnut-label">Total</p>
               </div>
               {categoryBreakdown.length > 0 && (
@@ -536,7 +549,6 @@ export default function Dashboard() {
             ) : (
               recentTransactions.map(txn => {
                 const style = getCategoryStyle(txn.category);
-                const isIncome = isIncomeCategory(txn.category);
                 return (
                   <div key={txn.transaction_id || txn.id} className="transaction-item">
                     <div className="transaction-icon" style={{ background: style.bg, color: style.color }}>
@@ -547,8 +559,8 @@ export default function Dashboard() {
                       <div className="transaction-category">{txn.category}</div>
                     </div>
                     <div className="transaction-date">{new Date(txn.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
-                    <div className={`transaction-amount ${isIncome ? 'income' : 'expense'}`}>
-                      {isIncome ? '+' : '-'}{formatCurrency(txn.amount)}
+                    <div className="transaction-amount expense">
+                      -{formatCurrency(txn.amount)}
                     </div>
                   </div>
                 );
