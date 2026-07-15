@@ -18,7 +18,7 @@ export default function TransactionTable({
     return () => document.removeEventListener('click', closeDropdown);
   }, []);
 
-  const getCategoryClass = (cat) => {
+  const getCategoryClass = () => {
     return 'surface-container-highest text-primary';
   };
 
