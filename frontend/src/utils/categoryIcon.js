@@ -1,11 +1,46 @@
-const getCategoryIcon = (cat) => {
-  const c = cat?.toLowerCase() || '';
-  if (c.includes('food') || c.includes('drinks') || c.includes('meals') || c.includes('restaurant')) return 'restaurant';
-  if (c.includes('transport') || c.includes('taxi') || c.includes('bus') || c.includes('car')) return 'directions_car';
-  if (c.includes('education') || c.includes('books') || c.includes('school')) return 'school';
-  if (c.includes('living') || c.includes('rent') || c.includes('dorm') || c.includes('housing')) return 'home';
-  if (c.includes('personal') || c.includes('entertainment') || c.includes('shopping') || c.includes('movie') || c.includes('games')) return 'celebration';
-  return 'account_balance_wallet';
+const CATEGORY_STYLES = {
+  food: { icon: 'restaurant', color: '#f59e0b', bg: '#fff4e6' },
+  drinks: { icon: 'restaurant', color: '#f59e0b', bg: '#fff4e6' },
+  meals: { icon: 'restaurant', color: '#f59e0b', bg: '#fff4e6' },
+  restaurant: { icon: 'restaurant', color: '#f59e0b', bg: '#fff4e6' },
+  transport: { icon: 'directions_car', color: '#3b82f6', bg: '#eff6ff' },
+  taxi: { icon: 'local_taxi', color: '#3b82f6', bg: '#eff6ff' },
+  bus: { icon: 'directions_bus', color: '#3b82f6', bg: '#eff6ff' },
+  car: { icon: 'directions_car', color: '#3b82f6', bg: '#eff6ff' },
+  education: { icon: 'school', color: '#8b5cf6', bg: '#f3efff' },
+  books: { icon: 'book', color: '#8b5cf6', bg: '#f3efff' },
+  school: { icon: 'school', color: '#8b5cf6', bg: '#f3efff' },
+  living: { icon: 'home', color: '#14b8a6', bg: '#e0f2fe' },
+  rent: { icon: 'home', color: '#14b8a6', bg: '#e0f2fe' },
+  dorm: { icon: 'home', color: '#14b8a6', bg: '#e0f2fe' },
+  housing: { icon: 'home', color: '#14b8a6', bg: '#e0f2fe' },
+  personal: { icon: 'celebration', color: '#ec4899', bg: '#fce7f3' },
+  entertainment: { icon: 'movie', color: '#ec4899', bg: '#fce7f3' },
+  shopping: { icon: 'shopping_bag', color: '#ec4899', bg: '#fce7f3' },
+  movie: { icon: 'movie', color: '#ec4899', bg: '#fce7f3' },
+  games: { icon: 'sports_esports', color: '#ec4899', bg: '#fce7f3' },
+  salary: { icon: 'payments', color: '#10b981', bg: '#e6f9f1' },
+  income: { icon: 'payments', color: '#10b981', bg: '#e6f9f1' },
+  wage: { icon: 'payments', color: '#10b981', bg: '#e6f9f1' },
+  freelance: { icon: 'payments', color: '#10b981', bg: '#e6f9f1' },
+  bills: { icon: 'receipt', color: '#14b8a6', bg: '#e0f2fe' },
+  utilities: { icon: 'bolt', color: '#14b8a6', bg: '#e0f2fe' },
+  electricity: { icon: 'bolt', color: '#14b8a6', bg: '#e0f2fe' },
 };
+
+const DEFAULT_STYLE = { icon: 'account_balance_wallet', color: '#6b7280', bg: '#f3f4f6' };
+
+const findCategoryStyle = (cat) => {
+  const c = cat?.toLowerCase() || '';
+  for (const key of Object.keys(CATEGORY_STYLES)) {
+    if (c.includes(key)) return CATEGORY_STYLES[key];
+  }
+  return DEFAULT_STYLE;
+};
+
+export const getCategoryIcon = (cat) => findCategoryStyle(cat).icon;
+export const getCategoryColor = (cat) => findCategoryStyle(cat).color;
+export const getCategoryBg = (cat) => findCategoryStyle(cat).bg;
+export const getCategoryStyle = (cat) => findCategoryStyle(cat);
 
 export default getCategoryIcon;
