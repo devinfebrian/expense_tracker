@@ -295,8 +295,7 @@ export default function Dashboard() {
           percentage,
           ...style,
         };
-      })
-      .slice(0, 5);
+      });
 
     // Daily totals for spending overview
     const dailyLabels = [];
