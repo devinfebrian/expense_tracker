@@ -6,7 +6,7 @@ import { useAuthStore } from '../store/useAuthStore';
 import { useBudgetStore } from '../store/useBudgetStore';
 import { useTransactionStore } from '../store/useTransactionStore';
 import { getCurrentPeriod, getPeriodRange, formatPeriodLabel, getPrevPeriod, getNextPeriod } from '../utils/period';
-import getCategoryIcon from '../utils/categoryIcon';
+import getCategoryIcon, { getCategoryStyle } from '../utils/categoryIcon';
 
 export default function Budgets() {
   const user = useAuthStore(state => state.user);
@@ -55,6 +55,8 @@ export default function Budgets() {
       statusClass = 'text-on-primary-fixed-variant';
     }
 
+    const categoryStyle = getCategoryStyle(b.category_name);
+
     return {
       ...b,
       spent,
@@ -62,6 +64,8 @@ export default function Budgets() {
       status,
       statusClass,
       icon: b.icon || getCategoryIcon(b.category_name),
+      color: categoryStyle.color,
+      bg: categoryStyle.bg,
       txns: categoryTxns
     };
   });
@@ -204,10 +208,10 @@ export default function Budgets() {
           const pct = Math.min(b.percentage, 100);
           const warn = b.percentage >= 100;
           return (
-            <div key={b.budget_id || b.id} className={`budget-card ${warn ? 'card-warning' : ''}`}>
+            <div key={b.budget_id || b.id} className={`budget-card ${warn ? 'card-warning' : ''}`} style={{ backgroundColor: b.bg, borderLeft: `4px solid ${b.color}` }}>
               <div className="budget-card-header">
                 <div>
-                  <h3 className="budget-card-name">{b.category_name}</h3>
+                  <h3 className="budget-card-name" style={{ color: b.color }}>{b.category_name}</h3>
                   <p className="budget-card-period">{(b.type)?.toUpperCase()}</p>
                 </div>
                 {isCurrentPeriod && (

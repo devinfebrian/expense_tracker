@@ -296,7 +296,7 @@ export default function Dashboard() {
           ...style,
         };
       })
-      .slice(0, 4);
+      .slice(0, 5);
 
     // Daily totals for spending overview
     const dailyLabels = [];
@@ -471,7 +471,7 @@ export default function Dashboard() {
           />
         </div>
 
-        <div className="chart-card col-span-4">
+        <div className="chart-card col-span-4" style={{ display: 'flex', flexDirection: 'column' }}>
           <div className="chart-header">
             <h4 className="chart-title">Expense by Category</h4>
           </div>
@@ -481,6 +481,35 @@ export default function Dashboard() {
                 <span className="doughnut-value">{formatCurrency(totalExpenses)}</span>
                 <p className="doughnut-label">Total</p>
               </div>
+              {categoryBreakdown.length > 0 && (
+                <div className="doughnut-labels-container">
+                  {categoryBreakdown.map((c, index) => {
+                    const startAngle = categoryBreakdown.slice(0, index).reduce((sum, cat) => sum + cat.pct, 0) * 3.6;
+                    const midAngle = startAngle + (c.pct * 3.6 / 2);
+                    const radius = 70;
+                    const x = Math.cos((midAngle - 90) * Math.PI / 180) * radius;
+                    const y = Math.sin((midAngle - 90) * Math.PI / 180) * radius;
+                    return (
+                      <span
+                        key={c.label + index}
+                        className="doughnut-pct-label"
+                        style={{
+                          position: 'absolute',
+                          left: `calc(50% + ${x}px)`,
+                          top: `calc(50% + ${y}px)`,
+                          transform: 'translate(-50%, -50%)',
+                          fontSize: '12px',
+                          fontWeight: '700',
+                          color: '#fff',
+                          textShadow: '0 1px 2px rgba(0,0,0,0.3)',
+                        }}
+                      >
+                        {c.pct}%
+                      </span>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
           <div className="category-list">
@@ -491,10 +520,11 @@ export default function Dashboard() {
             ) : (
               categoryBreakdown.map((c, index) => (
                 <div key={c.label + index} className="category-item">
-                  <span className="category-dot" style={{ background: c.color }} />
-                  <span>{c.label}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-sm)' }}>
+                    <span className="category-dot" style={{ background: c.color }} />
+                    <span>{c.label}</span>
+                  </div>
                   <span className="category-amount">{formatCurrency(c.amount)}</span>
-                  <span className="category-pct">{c.pct}%</span>
                 </div>
               ))
             )}
@@ -503,15 +533,15 @@ export default function Dashboard() {
       </div>
 
       {/* Bottom Row */}
-      <div className="dashboard-grid">
-        <div className="chart-card col-span-7">
+      <div className="dashboard-grid" style={{ alignItems: 'stretch' }}>
+        <div className="chart-card col-span-7" style={{ display: 'flex', flexDirection: 'column' }}>
           <div className="chart-header">
             <h4 className="chart-title">Recent Transactions</h4>
             <Link to="/transactions" className="chart-link">
               View all <span className="material-symbols-outlined" style={{ fontSize: 16 }}>chevron_right</span>
             </Link>
           </div>
-          <div className="transaction-list">
+          <div className="scrollable-container" style={{ maxHeight: '430px', flex: 1 }}>
             {recentTransactions.length === 0 ? (
               <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '24px 0' }}>
                 No transactions yet.
@@ -539,14 +569,14 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="chart-card col-span-5">
+        <div className="chart-card col-span-5" style={{ display: 'flex', flexDirection: 'column' }}>
           <div className="chart-header">
             <h4 className="chart-title">Budget Overview</h4>
             <Link to="/budgets" className="chart-link">
               View all <span className="material-symbols-outlined" style={{ fontSize: 16 }}>chevron_right</span>
             </Link>
           </div>
-          <div className="budget-list">
+          <div className="scrollable-container budget-scrollable" style={{ maxHeight: '430px', flex: 1 }}>
             {budgetOverview.length === 0 ? (
               <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '24px 0' }}>
                 No active budgets set.
