@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth.js';
 
 export default function Topbar({ onMenuClick }) {
@@ -11,14 +12,14 @@ export default function Topbar({ onMenuClick }) {
         <button className="menu-btn" onClick={onMenuClick} aria-label="Open menu">
           <span className="material-symbols-outlined">menu</span>
         </button>
-        <h2 className="topbar-title-mobile">SpendWise</h2>
+        <h2 className="topbar-title-mobile">Duidku</h2>
       </div>
       <div className="topbar-actions">
         <button className="topbar-icon-btn" aria-label="Notifications">
           <span className="material-symbols-outlined">notifications</span>
           <span className="badge" />
         </button>
-        <div className="topbar-profile">
+        <Link to="/profile" className="topbar-profile" style={{ textDecoration: 'none', color: 'inherit', display: 'flex', alignItems: 'center' }}>
           <span className="topbar-profile-name">{displayName}</span>
           <div className="topbar-avatar">
             {user?.avatar ? (
@@ -28,7 +29,7 @@ export default function Topbar({ onMenuClick }) {
             )}
           </div>
           <span className="material-symbols-outlined" style={{ fontSize: 18, color: 'var(--text-secondary)' }}>expand_more</span>
-        </div>
+        </Link>
       </div>
     </header>
   );

@@ -1,6 +1,14 @@
 import { useState, useEffect } from 'react';
 import Modal from './Modal';
 
+// Helper function to format number string as Rupiah thousands (e.g. 1.000.000)
+const formatRupiah = (value) => {
+  if (!value) return '';
+  const clean = value.toString().replace(/\D/g, '');
+  if (!clean) return '';
+  return parseInt(clean, 10).toLocaleString('id-ID');
+};
+
 export default function BudgetModal({
   isOpen,
   editingItem,
@@ -19,7 +27,7 @@ export default function BudgetModal({
     if (editingItem) {
       setForm({
         category_id: editingItem.category_id,
-        limit: editingItem.limit.toString(),
+        limit: formatRupiah(editingItem.limit.toString()),
         type: editingItem.type || 'monthly'
       });
     } else {
@@ -35,7 +43,11 @@ export default function BudgetModal({
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSave(form);
+    const cleanLimit = form.limit.toString().replace(/\D/g, '');
+    onSave({
+      ...form,
+      limit: parseFloat(cleanLimit) || 0
+    });
   };
 
   return (
@@ -77,11 +89,13 @@ export default function BudgetModal({
           <label className="form-label">Limit (Rp)</label>
           <input 
             className="form-input" 
-            type="number" 
-            min="0" 
-            step="0.01" 
+            type="text" 
+            inputMode="numeric"
             value={form.limit} 
-            onChange={e => setForm(f => ({ ...f, limit: e.target.value }))} 
+            onChange={e => {
+              const formatted = formatRupiah(e.target.value);
+              setForm(f => ({ ...f, limit: formatted }));
+            }} 
             required 
           />
         </div>

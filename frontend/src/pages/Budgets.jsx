@@ -61,7 +61,8 @@ export default function Budgets() {
       percentage,
       status,
       statusClass,
-      icon: b.icon || getCategoryIcon(b.category_name)
+      icon: b.icon || getCategoryIcon(b.category_name),
+      txns: categoryTxns
     };
   });
 
@@ -115,34 +116,20 @@ export default function Budgets() {
   const isCurrentPeriod = selectedPeriod === getCurrentPeriod('monthly');
 
   const isOverBudget = calculatedBudgets.some(b => b.percentage >= 100);
+  const monthlyBudgets = calculatedBudgets.filter(b => b.type === 'monthly');
+  const totalBudget = monthlyBudgets.reduce((s, b) => s + b.limit, 0);
 
-  // Total budget: aggregate by category to avoid double-counting overlapping budgets
-  const budgetByCategory = {};
-  calculatedBudgets.forEach(b => {
-    const existing = budgetByCategory[b.category_id];
-    if (!existing || b.limit > existing.limit) {
-      budgetByCategory[b.category_id] = b;
+  // Avoid double-counting transactions that fall into multiple budgets (e.g. daily and monthly budgets)
+  const uniqueTxns = new Map();
+  monthlyBudgets.forEach(b => {
+    if (b.txns) {
+      b.txns.forEach(t => {
+        const id = t.transaction_id || t.id;
+        uniqueTxns.set(id, t);
+      });
     }
   });
-  const totalBudget = Object.values(budgetByCategory).reduce((s, b) => s + b.limit, 0);
-
-  // Total spent: deduplicate transactions that match multiple budgets
-  const matchedTxnIds = new Set();
-  budgets.forEach(b => {
-    const range = getPeriodRange(b.period);
-    transactions.forEach(t => {
-      if (t.category_id !== b.category_id) return;
-      if (!range) return;
-      const d = new Date(t.date);
-      if (d >= range.start && d < range.end) {
-        matchedTxnIds.add(t.transaction_id || t.id);
-      }
-    });
-  });
-  const totalSpent = [...matchedTxnIds].reduce((sum, id) => {
-    const t = transactions.find(txn => (txn.transaction_id || txn.id) === id);
-    return sum + (t ? t.amount : 0);
-  }, 0);
+  const totalSpent = Array.from(uniqueTxns.values()).reduce((s, t) => s + t.amount, 0);
 
   if (loadingBudgets && budgets.length === 0) {
     return (
