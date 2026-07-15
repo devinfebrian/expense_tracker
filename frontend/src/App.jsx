@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import Landing from './pages/Landing';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
@@ -10,7 +11,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import { useAuth } from './hooks/useAuth';
 
 function App() {
-  const { fetchMe, loading } = useAuth();
+  const { user, fetchMe, loading } = useAuth();
 
   useEffect(() => {
     fetchMe();
@@ -27,8 +28,18 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
+        <Route
+          path="/"
+          element={user ? <Navigate to="/dashboard" replace /> : <Landing />}
+        />
+        <Route
+          path="/login"
+          element={user ? <Navigate to="/dashboard" replace /> : <Login />}
+        />
+        <Route
+          path="/register"
+          element={user ? <Navigate to="/dashboard" replace /> : <Register />}
+        />
         
         <Route
           path="/dashboard"
@@ -73,3 +84,4 @@ function App() {
 }
 
 export default App;
+
