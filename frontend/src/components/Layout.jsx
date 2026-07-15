@@ -33,7 +33,7 @@ export default function Layout({ children }) {
         }}
       >
         <div className="mobile-sidebar-inner">
-          <Sidebar />
+          <Sidebar onNavigate={() => setMobileMenuOpen(false)} />
         </div>
       </div>
       <div className="main-area">

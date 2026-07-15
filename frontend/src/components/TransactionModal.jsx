@@ -2,6 +2,14 @@ import { useState, useEffect } from 'react';
 import Modal from './Modal';
 import api from '../api/axios.js';
 
+const getLocalDateString = () => {
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 // Helper function to format number string as Rupiah thousands (e.g. 1.000.000)
 const formatRupiah = (value) => {
   if (!value) return '';
@@ -21,7 +29,7 @@ export default function TransactionModal({
     merchant: '',
     category_id: '',
     amount: '',
-    date: new Date().toISOString().split('T')[0],
+    date: getLocalDateString(),
     notes: ''
   });
 
@@ -68,7 +76,7 @@ export default function TransactionModal({
           merchant: data.merchant || '',
           category_id: matchedCategory ? (matchedCategory.category_id || matchedCategory.id) : (categories[0]?.category_id || categories[0]?.id || ''),
           amount: data.amount ? formatRupiah(data.amount.toString()) : '',
-          date: data.date || new Date().toISOString().split('T')[0],
+          date: data.date || getLocalDateString(),
           notes: data.notes || ''
         });
 
@@ -99,7 +107,7 @@ export default function TransactionModal({
         merchant: '',
         category_id: categories[0]?.category_id || categories[0]?.id || '',
         amount: '',
-        date: new Date().toISOString().split('T')[0],
+        date: getLocalDateString(),
         notes: ''
       });
     }
@@ -110,9 +118,15 @@ export default function TransactionModal({
   const handleSubmit = (e) => {
     e.preventDefault();
     const cleanAmount = form.amount.toString().replace(/\D/g, '');
+    const amount = parseFloat(cleanAmount);
+    if (isNaN(amount) || amount <= 0) {
+      alert('Amount must be greater than 0');
+      return;
+    }
     onSave({
       ...form,
-      amount: parseFloat(cleanAmount) || 0
+      merchant: form.merchant.trim(),
+      amount
     });
   };
 

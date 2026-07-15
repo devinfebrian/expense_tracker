@@ -68,6 +68,13 @@ export const createBudget = async (user_id, { category_id, limit, type, period }
     throw err;
   }
 
+  const parsedLimit = parseFloat(limit);
+  if (isNaN(parsedLimit) || parsedLimit <= 0) {
+    const err = new Error('Limit must be greater than 0');
+    err.statusCode = 400;
+    throw err;
+  }
+
   // Collision pre-check ( belt + braces; second line of defense is the
   // compound unique index added in a follow-up commit ).
   const existing = await Budget.exists({
@@ -87,7 +94,7 @@ export const createBudget = async (user_id, { category_id, limit, type, period }
     budget = await Budget.create({
       user_id,
       category_id,
-      limit: parseFloat(limit),
+      limit: parsedLimit,
       type: resolvedType,
       period: resolvedPeriod,
     });
@@ -112,13 +119,28 @@ export const updateBudget = async (user_id, budget_id, { category_id, limit, typ
     throw err;
   }
 
-  const resolvedType = type || budget.type;
+  if (limit !== undefined) {
+    const parsedLimit = parseFloat(limit);
+    if (isNaN(parsedLimit) || parsedLimit <= 0) {
+      const err = new Error('Limit must be greater than 0');
+      err.statusCode = 400;
+      throw err;
+    }
+  }
+
+  if (type && type !== budget.type) {
+    const err = new Error('Budget type cannot be changed');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  const resolvedType = budget.type;
   const resolvedCategoryId = category_id || budget.category_id;
   // Period is locked: a budget always lives in the period it was created in.
   // To move it, delete + recreate. Ignoring any incoming `period` payload.
   const resolvedPeriod = budget.period;
 
-  if (resolvedType !== budget.type || resolvedCategoryId !== budget.category_id) {
+  if (resolvedCategoryId !== budget.category_id) {
     const conflict = await Budget.exists({
       user_id,
       category_id: resolvedCategoryId,
@@ -134,7 +156,6 @@ export const updateBudget = async (user_id, budget_id, { category_id, limit, typ
   }
 
   budget.category_id = resolvedCategoryId;
-  budget.type = resolvedType;
   if (limit !== undefined) budget.limit = parseFloat(limit);
 
   await budget.save();

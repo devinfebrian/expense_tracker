@@ -44,9 +44,14 @@ export default function BudgetModal({
   const handleSubmit = (e) => {
     e.preventDefault();
     const cleanLimit = form.limit.toString().replace(/\D/g, '');
+    const limit = parseFloat(cleanLimit);
+    if (isNaN(limit) || limit <= 0) {
+      alert('Limit must be greater than 0');
+      return;
+    }
     onSave({
       ...form,
-      limit: parseFloat(cleanLimit) || 0
+      limit
     });
   };
 
@@ -78,6 +83,7 @@ export default function BudgetModal({
               className="form-input" 
               value={form.type} 
               onChange={e => setForm(f => ({ ...f, type: e.target.value }))}
+              disabled={!!editingItem}
             >
               <option value="daily">Daily</option>
               <option value="weekly">Weekly</option>

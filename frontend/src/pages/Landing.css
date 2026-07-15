@@ -8,6 +8,7 @@
   background: var(--background);
   height: 100vh;
   overflow-y: auto !important; /* Ensure landing page can scroll */
+  overflow-x: hidden;
   position: relative;
 }
 
@@ -391,6 +392,18 @@ main {
   bottom: 40px;
   right: -25px;
   animation: cardFloatRight 6s ease-in-out infinite alternate;
+}
+
+@media (max-width: 640px) {
+  .floating-card.savings {
+    left: 8px;
+    top: 8px;
+  }
+
+  .floating-card.budget {
+    right: 8px;
+    bottom: 8px;
+  }
 }
 
 .floating-card-icon {
