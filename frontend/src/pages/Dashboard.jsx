@@ -486,7 +486,7 @@ export default function Dashboard() {
                   {categoryBreakdown.map((c, index) => {
                     const startAngle = categoryBreakdown.slice(0, index).reduce((sum, cat) => sum + cat.pct, 0) * 3.6;
                     const midAngle = startAngle + (c.pct * 3.6 / 2);
-                    const radius = 70;
+                    const radius = 40; // 40% of container size (perfectly middle of the ring)
                     const x = Math.cos((midAngle - 90) * Math.PI / 180) * radius;
                     const y = Math.sin((midAngle - 90) * Math.PI / 180) * radius;
                     return (
@@ -495,8 +495,8 @@ export default function Dashboard() {
                         className="doughnut-pct-label"
                         style={{
                           position: 'absolute',
-                          left: `calc(50% + ${x}px)`,
-                          top: `calc(50% + ${y}px)`,
+                          left: `calc(50% + ${x}%)`,
+                          top: `calc(50% + ${y}%)`,
                           transform: 'translate(-50%, -50%)',
                           fontSize: '12px',
                           fontWeight: '700',
