@@ -20,7 +20,7 @@ export default function BudgetModal({
       setForm({
         category_id: editingItem.category_id,
         limit: editingItem.limit.toString(),
-        type: editingItem.type || editingItem.period || 'monthly'
+        type: editingItem.type || 'monthly'
       });
     } else {
       setForm({

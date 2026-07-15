@@ -27,9 +27,20 @@ const budgetSchema = new mongoose.Schema({
     enum: ['daily', 'weekly', 'monthly'],
     default: 'monthly',
   },
+  period: {
+    type: String,
+    required: [true, 'Period is required'],
+    trim: true,
+    index: true,
+  },
 }, {
   timestamps: true,
 });
+
+budgetSchema.index(
+  { user_id: 1, category_id: 1, type: 1, period: 1 },
+  { unique: true }
+);
 
 const Budget = mongoose.model('Budget', budgetSchema);
 export default Budget;

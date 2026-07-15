@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import getCategoryIcon from '../utils/categoryIcon';
 
 export default function TransactionTable({ 
   transactions, 
@@ -16,16 +17,6 @@ export default function TransactionTable({
     document.addEventListener('click', closeDropdown);
     return () => document.removeEventListener('click', closeDropdown);
   }, []);
-
-  const getCategoryIcon = (cat) => {
-    const c = cat?.toLowerCase() || '';
-    if (c.includes('food') || c.includes('drinks') || c.includes('meals')) return 'restaurant';
-    if (c.includes('transport') || c.includes('taxi') || c.includes('bus') || c.includes('car')) return 'directions_car';
-    if (c.includes('education') || c.includes('books') || c.includes('school')) return 'school';
-    if (c.includes('living') || c.includes('rent') || c.includes('dorm') || c.includes('housing')) return 'home';
-    if (c.includes('personal') || c.includes('entertainment') || c.includes('shopping') || c.includes('movie') || c.includes('games')) return 'celebration';
-    return 'account_balance_wallet';
-  };
 
   const getCategoryClass = (cat) => {
     return 'surface-container-highest text-primary';
@@ -71,7 +62,7 @@ export default function TransactionTable({
                     {txn.category}
                   </span>
                 </td>
-                <td data-label="Date" className="text-on-surface-variant">{txn.date}</td>
+                <td data-label="Date" className="text-on-surface-variant">{new Date(txn.date).toLocaleDateString('en-CA')}</td>
                 <td data-label="Amount" className={showActions ? 'text-center text-tertiary' : 'text-right text-tertiary'}>
                   -Rp{txn.amount.toLocaleString('id-ID')}
                 </td>

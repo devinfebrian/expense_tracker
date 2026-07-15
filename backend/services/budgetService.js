@@ -1,69 +1,110 @@
 import Budget from '../models/Budget.js';
 import Category from '../models/Category.js';
+import { getCurrentPeriod } from '../utils/period.js';
 
+let catMapCache = null;
+let catMapAt = 0;
 const getCategoryMap = async () => {
+  if (catMapCache && Date.now() - catMapAt < 60_000) return catMapCache;
   const categories = await Category.find();
-  const catMap = {};
+  catMapCache = {};
   categories.forEach(c => {
-    catMap[c.category_id] = c.category_name;
+    catMapCache[c.category_id] = c.category_name;
   });
-  return catMap;
+  catMapAt = Date.now();
+  return catMapCache;
 };
 
-export const fetchBudgetsByUserId = async (user_id) => {
-  const budgets = await Budget.find({ user_id });
-  const catMap = await getCategoryMap();
+const shapeBudget = (b, catMap) => ({
+  budget_id: b.budget_id,
+  id: b.budget_id,
+  user_id: b.user_id,
+  category_id: b.category_id,
+  category_name: catMap[b.category_id] || 'Others',
+  name: catMap[b.category_id] || 'Others',
+  limit: b.limit,
+  type: b.type,
+  period: b.period,
+});
 
-  return budgets.map(b => ({
-    budget_id: b.budget_id,
-    id: b.budget_id,
-    user_id: b.user_id,
-    category_id: b.category_id,
-    category_name: catMap[b.category_id] || 'Others',
-    name: catMap[b.category_id] || 'Others',
-    limit: b.limit,
-    type: b.type,
-    period: b.type
-  }));
-};
+// Default-period resolution: 'current' means each budget type uses its own
+// current-period string. Since one response may mix types, we cannot use a
+// single string filter for 'current'. Instead when period='current', we
+// resolve to the set of current-period strings across all types.
+const resolveCurrentPeriods = () => ({
+  daily: getCurrentPeriod('daily'),
+  weekly: getCurrentPeriod('weekly'),
+  monthly: getCurrentPeriod('monthly'),
+});
 
-export const createBudget = async (user_id, { name, category_name, category_id, limit, period, type }) => {
-  let targetCategoryId = category_id;
-  if (!targetCategoryId && (name || category_name)) {
-    const found = await Category.findOne({ category_name: name || category_name });
-    if (found) targetCategoryId = found.category_id;
+export const fetchBudgetsByUserId = async (user_id, { period = 'current' } = {}) => {
+  let query = { user_id };
+  if (period === 'current') {
+    const cur = resolveCurrentPeriods();
+    query.period = { $in: [cur.daily, cur.weekly, cur.monthly] };
+  } else if (period && period !== 'all') {
+    // Monthly "YYYY-MM" must also cover daily/weekly budgets whose period
+    // falls within that month (period format starts with YYYY-MM).
+    const parts = period.split('-');
+    if (parts.length === 2) {
+      query.period = { $regex: `^${period}` };
+    } else {
+      query.period = period;
+    }
   }
 
-  const resolvedType = type || period || 'monthly';
+  const budgets = await Budget.find(query).sort({ createdAt: -1 });
+  const catMap = await getCategoryMap();
+  return budgets.map(b => shapeBudget(b, catMap));
+};
 
-  if (!targetCategoryId || limit === undefined) {
+export const createBudget = async (user_id, { category_id, limit, type, period }) => {
+  const resolvedType = type || 'monthly';
+  const resolvedPeriod = period || getCurrentPeriod(resolvedType);
+
+  if (!category_id || limit === undefined) {
     const err = new Error('Category and limit are required');
     err.statusCode = 400;
     throw err;
   }
 
-  const budget = await Budget.create({
+  // Collision pre-check ( belt + braces; second line of defense is the
+  // compound unique index added in a follow-up commit ).
+  const existing = await Budget.exists({
     user_id,
-    category_id: targetCategoryId,
-    limit: parseFloat(limit),
+    category_id,
     type: resolvedType,
+    period: resolvedPeriod,
   });
+  if (existing) {
+    const err = new Error('Budget for this category + period already exists');
+    err.statusCode = 409;
+    throw err;
+  }
+
+  let budget;
+  try {
+    budget = await Budget.create({
+      user_id,
+      category_id,
+      limit: parseFloat(limit),
+      type: resolvedType,
+      period: resolvedPeriod,
+    });
+  } catch (e) {
+    if (e.code === 11000) {
+      const err = new Error('Budget for this category + period already exists');
+      err.statusCode = 409;
+      throw err;
+    }
+    throw e;
+  }
 
   const catMap = await getCategoryMap();
-  return {
-    budget_id: budget.budget_id,
-    id: budget.budget_id,
-    user_id: budget.user_id,
-    category_id: budget.category_id,
-    category_name: catMap[budget.category_id] || 'Others',
-    name: catMap[budget.category_id] || 'Others',
-    limit: budget.limit,
-    type: budget.type,
-    period: budget.type
-  };
+  return shapeBudget(budget, catMap);
 };
 
-export const updateBudget = async (user_id, budget_id, { name, category_name, category_id, limit, period, type }) => {
+export const updateBudget = async (user_id, budget_id, { category_id, limit, type }) => {
   const budget = await Budget.findOne({ budget_id, user_id });
   if (!budget) {
     const err = new Error('Budget not found');
@@ -71,32 +112,35 @@ export const updateBudget = async (user_id, budget_id, { name, category_name, ca
     throw err;
   }
 
-  let targetCategoryId = category_id;
-  if (!targetCategoryId && (name || category_name)) {
-    const found = await Category.findOne({ category_name: name || category_name });
-    if (found) targetCategoryId = found.category_id;
+  const resolvedType = type || budget.type;
+  const resolvedCategoryId = category_id || budget.category_id;
+  // Period is locked: a budget always lives in the period it was created in.
+  // To move it, delete + recreate. Ignoring any incoming `period` payload.
+  const resolvedPeriod = budget.period;
+
+  if (resolvedType !== budget.type || resolvedCategoryId !== budget.category_id) {
+    const conflict = await Budget.exists({
+      user_id,
+      category_id: resolvedCategoryId,
+      type: resolvedType,
+      period: resolvedPeriod,
+      budget_id: { $ne: budget.budget_id },
+    });
+    if (conflict) {
+      const err = new Error('Budget for this category + period already exists');
+      err.statusCode = 409;
+      throw err;
+    }
   }
 
-  const resolvedType = type || period;
-
-  if (targetCategoryId) budget.category_id = targetCategoryId;
+  budget.category_id = resolvedCategoryId;
+  budget.type = resolvedType;
   if (limit !== undefined) budget.limit = parseFloat(limit);
-  if (resolvedType) budget.type = resolvedType;
 
   await budget.save();
 
   const catMap = await getCategoryMap();
-  return {
-    budget_id: budget.budget_id,
-    id: budget.budget_id,
-    user_id: budget.user_id,
-    category_id: budget.category_id,
-    category_name: catMap[budget.category_id] || 'Others',
-    name: catMap[budget.category_id] || 'Others',
-    limit: budget.limit,
-    type: budget.type,
-    period: budget.type
-  };
+  return shapeBudget(budget, catMap);
 };
 
 export const deleteBudget = async (user_id, budget_id) => {
