@@ -7,6 +7,8 @@ export function useAuth() {
   const register = useAuthStore(state => state.register);
   const logout = useAuthStore(state => state.logout);
   const fetchMe = useAuthStore(state => state.fetchMe);
+  const updateProfile = useAuthStore(state => state.updateProfile);
+  const updatePassword = useAuthStore(state => state.updatePassword);
   
-  return { user, loading, login, register, logout, fetchMe };
+  return { user, loading, login, register, logout, fetchMe, updateProfile, updatePassword };
 }

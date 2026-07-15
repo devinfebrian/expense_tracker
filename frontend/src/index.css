@@ -206,7 +206,9 @@ img {
   border-right: 1px solid var(--outline-variant);
   padding: var(--space-lg) 0;
   flex-shrink: 0;
-  overflow-y: auto;
+  position: relative;
+  transition: width 0.2s ease-in-out;
+  z-index: 50;
 }
 
 @media(min-width:768px) {
@@ -1472,4 +1474,75 @@ img {
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
+}
+
+/* Sidebar Minimized Styles */
+.sidebar.minimized {
+  width: 64px;
+}
+
+.sidebar.minimized .sidebar-brand {
+  justify-content: center;
+  padding: 0;
+}
+
+.sidebar.minimized .sidebar-brand > div:not(.sidebar-logo) {
+  display: none;
+}
+
+.sidebar.minimized .sidebar-nav {
+  padding: 0 8px;
+}
+
+.sidebar.minimized .sidebar-link {
+  justify-content: center;
+  padding: 8px 0;
+  gap: 0;
+}
+
+.sidebar.minimized .sidebar-link span:not(.material-symbols-outlined) {
+  display: none;
+}
+
+.sidebar.minimized .sidebar-profile {
+  padding: 0 8px !important;
+}
+
+.sidebar.minimized .profile-card {
+  justify-content: center;
+  gap: 0 !important;
+}
+
+.sidebar.minimized .profile-info {
+  display: none !important;
+}
+
+.sidebar.minimized .profile-card button {
+  display: none !important;
+}
+
+.sidebar-toggle-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-full);
+  background: var(--surface);
+  border: 1px solid var(--outline-variant);
+  color: var(--on-surface);
+  cursor: pointer;
+  position: absolute;
+  top: 32px;
+  right: -14px;
+  z-index: 100;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
+}
+
+.sidebar-toggle-btn:hover {
+  background: var(--primary-container);
+  color: var(--on-primary-container);
+  border-color: var(--primary);
+  transform: scale(1.05);
 }
