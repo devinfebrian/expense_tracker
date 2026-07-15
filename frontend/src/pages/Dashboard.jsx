@@ -372,36 +372,8 @@ export default function Dashboard() {
       </div>
 
       <div className="dashboard-grid">
-        <div className="chart-card" style={{ gridColumn: 'span 12', gridRow: 1 }}>
-          <div className="chart-header">
-            <h4 className="chart-title">Budget Health</h4>
-            <Link to="/budgets" className="chart-link">Manage</Link>
-          </div>
-          <div className="budget-list" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px' }}>
-            {calculatedBudgets.length === 0 ? (
-              <p style={{ gridColumn: 'span 12', fontSize: 13, color: 'var(--on-surface-variant)', textAlign: 'center', padding: '16px 0' }}>
-                No active budgets set. Go to manage budgets to get started.
-              </p>
-            ) : (
-              calculatedBudgets.map(b => (
-                <div key={b.budget_id || b.id} className="budget-item" style={{ background: 'var(--surface-container-low)', padding: '16px', borderRadius: '8px', border: '1px solid var(--outline-variant)' }}>
-                  <div className="budget-header">
-                    <span className="budget-label">{b.category_name?.toUpperCase() || b.name?.toUpperCase()}</span>
-                    <span className={`budget-amount ${b.warning ? 'text-tertiary' : ''}`}>
-                      Rp{b.spent.toLocaleString('id-ID')} / Rp{b.limit.toLocaleString('id-ID')}
-                    </span>
-                  </div>
-                  <div className="progress-bar" style={{ marginTop: '8px' }}>
-                    <div className={`progress-fill ${b.warning ? 'bg-tertiary' : 'bg-secondary'}`} style={{ width: `${Math.min(b.percentage, 100)}%` }} />
-                  </div>
-                  <div className="budget-header" style={{ marginTop: 8 }}>
-                    <span className="text-on-surface-variant" style={{ fontSize: 10 }}>{b.type?.toUpperCase()}</span>
-                    <span className={b.statusClass} style={{ fontSize: 11, fontWeight: 600 }}>{b.status}</span>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
+        <div className="chart-card" style={{ gridColumn: 'span 12', gridRow: 1 }} key={selectedPeriod}>
+          <SpendingTrendsChart labels={dailyLabels} totals={dailyTotals} />
         </div>
 
         <div className="chart-card" style={{ gridColumn: 'span 4', gridRow: 2 }}>
@@ -428,8 +400,36 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="chart-card" style={{ gridColumn: 'span 4', gridRow: 3 }} key={selectedPeriod}>
-          <SpendingTrendsChart labels={dailyLabels} totals={dailyTotals} />
+        <div className="chart-card" style={{ gridColumn: 'span 4', gridRow: 3 }}>
+          <div className="chart-header">
+            <h4 className="chart-title">Budget Health</h4>
+            <Link to="/budgets" className="chart-link">Manage</Link>
+          </div>
+          <div className="budget-list" style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxHeight: '280px', overflowY: 'auto', paddingRight: '4px' }}>
+            {calculatedBudgets.length === 0 ? (
+              <p style={{ fontSize: 13, color: 'var(--on-surface-variant)', textAlign: 'center', padding: '16px 0' }}>
+                No active budgets set. Go to manage budgets to get started.
+              </p>
+            ) : (
+              calculatedBudgets.map(b => (
+                <div key={b.budget_id || b.id} className="budget-item" style={{ background: 'var(--surface-container-low)', padding: '12px 16px', borderRadius: '8px', border: '1px solid var(--outline-variant)' }}>
+                  <div className="budget-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span className="budget-label" style={{ fontWeight: 600, fontSize: '12px' }}>{b.category_name?.toUpperCase() || b.name?.toUpperCase()}</span>
+                    <span className={`budget-amount ${b.warning ? 'text-tertiary' : ''}`} style={{ fontSize: '12px' }}>
+                      Rp{b.spent.toLocaleString('id-ID')} / Rp{b.limit.toLocaleString('id-ID')}
+                    </span>
+                  </div>
+                  <div className="progress-bar" style={{ marginTop: '8px' }}>
+                    <div className={`progress-fill ${b.warning ? 'bg-tertiary' : 'bg-secondary'}`} style={{ width: `${Math.min(b.percentage, 100)}%` }} />
+                  </div>
+                  <div className="budget-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
+                    <span className="text-on-surface-variant" style={{ fontSize: 10 }}>{b.type?.toUpperCase()}</span>
+                    <span className={b.statusClass} style={{ fontSize: 11, fontWeight: 600 }}>{b.status}</span>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
         </div>
 
         <div className="chart-card" style={{ gridColumn: 'span 8', gridRow: '2 / 4' }}>

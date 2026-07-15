@@ -19,6 +19,7 @@ export default function Sidebar() {
     { href: '/dashboard', icon: 'dashboard', label: 'Overview' },
     { href: '/transactions', icon: 'receipt_long', label: 'History Expense' },
     { href: '/budgets', icon: 'account_balance_wallet', label: 'Budgets' },
+    { href: '/ai-insights', icon: 'auto_awesome', label: 'AI Insights' },
   ];
 
   const handleLogout = async () => {
@@ -62,10 +63,10 @@ export default function Sidebar() {
       <div className="sidebar-profile" style={{ padding: '0 16px', marginTop: 'auto' }}>
         <div className="profile-card" style={{ display: 'flex', alignItems: 'center', width: '100%', gap: '12px', border: 'none', background: 'transparent', padding: 0, boxShadow: 'none' }}>
           <Link to="/profile" style={{ display: 'flex', alignItems: 'center', flex: 1, gap: '12px', minWidth: 0 }}>
-            <div className="profile-avatar" style={{ width: '40px', height: '40px', borderRadius: '50%', overflow: 'hidden', backgroundColor: 'var(--surface-dim)', flexShrink: 0 }}>
+            <div className="profile-avatar" style={{ width: '40px', height: '40px', borderRadius: '50%', overflow: 'hidden', flexShrink: 0 }}>
               <img
-                src="/avatar.png"
-                alt="Professional Profile Portrait"
+                src={user?.avatar || '/avatars/avatar1.svg'}
+                alt="Profile Avatar"
                 style={{ width: '100%', height: '100%', objectFit: 'cover' }}
               />
             </div>

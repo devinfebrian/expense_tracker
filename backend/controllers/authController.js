@@ -22,6 +22,7 @@ const attachUser = (user) => ({
   user_id: user.user_id,
   name: user.name,
   email: user.email,
+  avatar: user.avatar,
 });
 
 export const register = async (req, res) => {
@@ -81,11 +82,11 @@ export const getMe = (req, res) => {
 
 export const updateProfile = async (req, res) => {
   try {
-    const { name, email } = req.body;
+    const { name, email, avatar } = req.body;
     if (!name || !email) {
       return res.status(400).json({ status: 'error', message: 'Name and email are required' });
     }
-    const updatedUser = await authService.updateUserProfile(req.user.user_id, name, email);
+    const updatedUser = await authService.updateUserProfile(req.user.user_id, name, email, avatar);
     
     // Sign a new token for the updated user
     const token = authService.signToken(updatedUser);

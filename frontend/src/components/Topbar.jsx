@@ -1,4 +1,8 @@
+import { useAuthStore } from '../store/useAuthStore';
+
 export default function Topbar() {
+  const user = useAuthStore((state) => state.user);
+
   return (
     <header className="topbar">
       <h2 className="topbar-title-mobile">Duidku</h2>
@@ -10,7 +14,7 @@ export default function Topbar() {
           <span className="material-symbols-outlined">settings</span>
         </button>
         <div className="topbar-avatar">
-          <img src="https://lh3.googleusercontent.com/aida-public/AB6AXuDJFhBfqA9PUwyURg3ntS0_eG7AluQGT5cLnFpi0ZO28YanLpt261uwboIB2uXmVfabZMvBEzZgUqi35Lq6Yb3jUyWqZF7ohTLINg76OEnC8kRQQi1kpvd5PCA62h4JkG2lOIgBeyftOHXaPTR1nthibQRJLpnMU2EWcE4YyeI1dohyMS0APasVi5yGX5D1Htvyg2tDrL7XM-oTU2KXV-rdwXUaucDLlna9lRzsD2-UYPPlpSfjIgmgz1T4AjWowYkMLVQni82bFP8" alt="Profile" />
+          <img src={user?.avatar || '/avatars/avatar1.svg'} alt="Profile" />
         </div>
       </div>
     </header>
