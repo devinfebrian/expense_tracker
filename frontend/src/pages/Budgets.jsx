@@ -61,7 +61,8 @@ export default function Budgets() {
       percentage,
       status,
       statusClass,
-      icon: b.icon || getCategoryIcon(b.category_name)
+      icon: b.icon || getCategoryIcon(b.category_name),
+      txns: categoryTxns
     };
   });
 
@@ -116,7 +117,18 @@ export default function Budgets() {
 
   const isOverBudget = calculatedBudgets.some(b => b.percentage >= 100);
   const totalBudget = calculatedBudgets.reduce((s, b) => s + b.limit, 0);
-  const totalSpent = calculatedBudgets.reduce((s, b) => s + b.spent, 0);
+
+  // Avoid double-counting transactions that fall into multiple budgets (e.g. daily and monthly budgets)
+  const uniqueTxns = new Map();
+  calculatedBudgets.forEach(b => {
+    if (b.txns) {
+      b.txns.forEach(t => {
+        const id = t.transaction_id || t.id;
+        uniqueTxns.set(id, t);
+      });
+    }
+  });
+  const totalSpent = Array.from(uniqueTxns.values()).reduce((s, t) => s + t.amount, 0);
 
   if (loadingBudgets && budgets.length === 0) {
     return (
