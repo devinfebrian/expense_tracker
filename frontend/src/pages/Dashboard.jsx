@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import Layout from '../components/Layout';
+import SummaryCard from '../components/SummaryCard';
 import TransactionModal from '../components/TransactionModal';
 import { useTransactionStore } from '../store/useTransactionStore';
 import { useBudgetStore } from '../store/useBudgetStore';
@@ -41,8 +42,8 @@ function SpendingTrendsChart({ labels, totals }) {
         </div>
       </div>
 
-      <div className="line-chart-container" style={{ position: 'relative', minHeight: '220px', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', marginTop: '16px' }}>
-        <div className="line-chart-yaxis" style={{ position: 'absolute', left: 0, top: 0, bottom: '24px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', fontSize: '11px', fontWeight: '600', color: 'var(--text-secondary)', zIndex: 1 }}>
+      <div className="line-chart-container" style={{ position: 'relative', minHeight: '220px', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', marginTop: '16px', flex: 1 }}>
+        <div className="line-chart-yaxis" style={{ position: 'absolute', left: 0, top: 0, bottom: '24px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', fontSize: '11px', fontWeight: '600', color: 'var(--text-secondary)', width: '60px', zIndex: 1 }}>
           {[100, 75, 50, 25, 0].map(pct => (
             <span key={pct} style={{ textAlign: 'left' }}>
               Rp{Math.round(maxDaily * pct / 100).toLocaleString('id-ID')}
@@ -204,6 +205,13 @@ export default function Dashboard() {
   const loading = loadingTxns || loadingBudgets;
 
   const {
+    totalExpenses,
+    transactionCount,
+    remainingBudget,
+    budgetLimit,
+    budgetUtilization,
+    expenseChange,
+    transactionCountChange,
     categoryBreakdown,
     recentTransactions,
     budgetOverview,
@@ -211,12 +219,54 @@ export default function Dashboard() {
     dailyTotals,
   } = useMemo(() => {
     const range = getPeriodRange(selectedPeriod);
+    const prevRange = getPeriodRange(getPrevPeriod(selectedPeriod, 'monthly'));
 
     const periodTxns = transactions.filter(t => {
       if (!range) return false;
       const d = new Date(t.date);
       return d >= range.start && d < range.end;
     });
+    const totalExpenses = periodTxns.reduce((sum, t) => sum + t.amount, 0);
+    const transactionCount = periodTxns.length;
+
+    const prevPeriodTxns = transactions.filter(t => {
+      if (!prevRange) return false;
+      const d = new Date(t.date);
+      return d >= prevRange.start && d < prevRange.end;
+    });
+    const prevTotalExpenses = prevPeriodTxns.reduce((sum, t) => sum + t.amount, 0);
+    const prevTransactionCount = prevPeriodTxns.length;
+
+    const pctChange = (curr, prev) => {
+      if (prev > 0) return parseFloat((((curr - prev) / prev) * 100).toFixed(1));
+      if (curr > 0) return 100;
+      return 0;
+    };
+
+    const expenseChange = pctChange(totalExpenses, prevTotalExpenses);
+    const transactionCountChange = pctChange(transactionCount, prevTransactionCount);
+
+    // Budget totals across monthly budgets for selected period
+    const monthlyBudgets = budgets.filter(b => b.type === 'monthly' && b.period === selectedPeriod);
+    const budgetLimit = monthlyBudgets.reduce((sum, b) => sum + b.limit, 0);
+
+    // Aggregate spending by category to avoid double-counting duplicate budgets
+    const spentByCategory = {};
+    monthlyBudgets.forEach(b => {
+      const bRange = getPeriodRange(b.period);
+      const spent = transactions
+        .filter(t => {
+          if (t.category_id !== b.category_id) return false;
+          if (!bRange) return false;
+          const d = new Date(t.date);
+          return d >= bRange.start && d < bRange.end;
+        })
+        .reduce((s, t) => s + t.amount, 0);
+      spentByCategory[b.category_id] = Math.max(spentByCategory[b.category_id] || 0, spent);
+    });
+    const budgetSpent = Object.values(spentByCategory).reduce((sum, v) => sum + v, 0);
+    const remainingBudget = Math.max(budgetLimit - budgetSpent, 0);
+    const budgetUtilization = budgetLimit > 0 ? Math.round((budgetSpent / budgetLimit) * 100) : 0;
     // Category breakdown
     const categoriesMap = {};
     periodTxns.forEach(t => {
@@ -279,6 +329,13 @@ export default function Dashboard() {
     }
 
     return {
+      totalExpenses,
+      transactionCount,
+      remainingBudget,
+      budgetLimit,
+      budgetUtilization,
+      expenseChange,
+      transactionCountChange,
       categoryBreakdown,
       recentTransactions,
       budgetOverview,
@@ -348,9 +405,41 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* Summary Cards */}
+      <div className="facts-grid">
+        <SummaryCard
+          label="Total Expenses"
+          value={formatCurrency(totalExpenses)}
+          icon="credit_card"
+          iconBg="var(--danger-light)"
+          iconColor="var(--danger)"
+          trend={`${expenseChange >= 0 ? '+' : ''}${expenseChange}%`}
+          trendDirection={expenseChange >= 0 ? 'down' : 'up'}
+          trendText="from last month"
+        />
+        <SummaryCard
+          label="Transactions"
+          value={transactionCount}
+          icon="receipt_long"
+          iconBg="var(--info-light)"
+          iconColor="var(--info)"
+          trend={`${transactionCountChange >= 0 ? '+' : ''}${transactionCountChange}%`}
+          trendDirection={transactionCountChange >= 0 ? 'up' : 'down'}
+          trendText="from last month"
+        />
+        <SummaryCard
+          label="Remaining Budget"
+          value={formatCurrency(remainingBudget)}
+          icon="account_balance_wallet"
+          iconBg="var(--primary-light)"
+          iconColor="var(--primary)"
+          trend={`${budgetUtilization}% used`}
+          trendText={`of ${formatCurrency(budgetLimit)} limit`}
+        />
+      </div>
       {/* Charts Row */}
-      <div className="dashboard-grid" style={{ marginBottom: 'var(--gutter)' }}>
-        <div className="chart-card col-span-8">
+      <div className="dashboard-grid" style={{ marginBottom: 'var(--gutter)', alignItems: 'stretch' }}>
+        <div className="chart-card col-span-8" style={{ display: 'flex', flexDirection: 'column' }}>
           <SpendingTrendsChart
             labels={dailyLabels}
             totals={dailyTotals}
