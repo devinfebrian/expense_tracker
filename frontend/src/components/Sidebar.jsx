@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth.js';
 
@@ -5,6 +6,14 @@ export default function Sidebar() {
   const { pathname } = useLocation();
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+
+  const [isMinimized, setIsMinimized] = useState(() => localStorage.getItem('sidebar-minimized') === 'true');
+
+  const handleToggle = () => {
+    const nextVal = !isMinimized;
+    setIsMinimized(nextVal);
+    localStorage.setItem('sidebar-minimized', String(nextVal));
+  };
 
   const links = [
     { href: '/dashboard', icon: 'dashboard', label: 'Overview' },
@@ -22,7 +31,17 @@ export default function Sidebar() {
   };
 
   return (
-    <aside className="sidebar">
+    <aside className={`sidebar ${isMinimized ? 'minimized' : ''}`}>
+      <button
+        onClick={handleToggle}
+        className="sidebar-toggle-btn"
+        title={isMinimized ? 'Expand Sidebar' : 'Collapse Sidebar'}
+      >
+        <span className="material-symbols-outlined">
+          {isMinimized ? 'chevron_right' : 'chevron_left'}
+        </span>
+      </button>
+
       <div className="sidebar-brand">
         <div className="sidebar-logo">
           <span className="material-symbols-outlined">account_balance_wallet</span>
@@ -41,17 +60,19 @@ export default function Sidebar() {
         ))}
       </nav>
       <div className="sidebar-profile" style={{ padding: '0 16px', marginTop: 'auto' }}>
-        <div className="profile-card" style={{ display: 'flex', alignItems: 'center', width: '100%', gap: '12px' }}>
-          <div className="profile-avatar" style={{ width: '40px', height: '40px', borderRadius: '50%', overflow: 'hidden', backgroundColor: 'var(--surface-dim)' }}>
-            <img
-              src="https://lh3.googleusercontent.com/aida-public/AB6AXuDtln60KVN4RYuc3E_PWzJUg1Cy3GQNrr3IU0rg2E3__I4Yx_WBTS7o7Tadm5qx8oIMkdoP2_MxVkAShfY2pXmqO9rHuHbOdo2i_a385t9mvaGHZi_hgBXj8O02AulGfm730YCH6M0WuY3dtyS-tDAQyoP2h1Ur7Ou-YJyUDSzKeHnOPvBeYe6b5Mu8I-sDlTakY0kl0M2VfsI6ZeDFVLG3_LFpyyXmmJivXnlPsv2dV6T0qomvUJc2Dw"
-              alt="Alex Chen Profile Portrait"
-              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-            />
-          </div>
-          <div className="profile-info" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-            <p className="profile-name" style={{ margin: 0, fontSize: '12px', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--on-surface)' }}>{user?.name || 'Alex Chen'}</p>
-          </div>
+        <div className="profile-card" style={{ display: 'flex', alignItems: 'center', width: '100%', gap: '12px', border: 'none', background: 'transparent', padding: 0, boxShadow: 'none' }}>
+          <Link to="/profile" style={{ display: 'flex', alignItems: 'center', flex: 1, gap: '12px', minWidth: 0 }}>
+            <div className="profile-avatar" style={{ width: '40px', height: '40px', borderRadius: '50%', overflow: 'hidden', backgroundColor: 'var(--surface-dim)', flexShrink: 0 }}>
+              <img
+                src="/avatar.png"
+                alt="Professional Profile Portrait"
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              />
+            </div>
+            <div className="profile-info" style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+              <p className="profile-name" style={{ margin: 0, fontSize: '12px', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--on-surface)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user?.name || 'Alex Chen'}</p>
+            </div>
+          </Link>
           <button
             onClick={handleLogout}
             className="icon-btn"
@@ -64,7 +85,8 @@ export default function Sidebar() {
               borderRadius: '50%',
               cursor: 'pointer',
               color: 'var(--error)',
-              transition: 'background-color 0.2s'
+              transition: 'background-color 0.2s',
+              flexShrink: 0
             }}
           >
             <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>logout</span>

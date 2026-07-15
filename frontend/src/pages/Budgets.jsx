@@ -61,7 +61,8 @@ export default function Budgets() {
       percentage,
       status,
       statusClass,
-      icon: b.icon || getCategoryIcon(b.category_name)
+      icon: b.icon || getCategoryIcon(b.category_name),
+      txns: categoryTxns
     };
   });
 
@@ -115,20 +116,19 @@ export default function Budgets() {
   const isCurrentPeriod = selectedPeriod === getCurrentPeriod('monthly');
 
   const isOverBudget = calculatedBudgets.some(b => b.percentage >= 100);
-  const monthlyBudgets = budgets.filter(b => b.type === 'monthly');
-  const totalBudget = monthlyBudgets.reduce((s, b) => s + b.limit, 0);
+  const totalBudget = calculatedBudgets.reduce((s, b) => s + b.limit, 0);
 
-  const budgetCategoryIds = new Set(monthlyBudgets.map(b => b.category_id));
-  const periodRange = getPeriodRange(selectedPeriod);
-  const totalSpent = periodRange
-    ? transactions
-        .filter(t => {
-          if (!budgetCategoryIds.has(t.category_id)) return false;
-          const d = new Date(t.date);
-          return d >= periodRange.start && d < periodRange.end;
-        })
-        .reduce((s, t) => s + t.amount, 0)
-    : 0;
+  // Avoid double-counting transactions that fall into multiple budgets (e.g. daily and monthly budgets)
+  const uniqueTxns = new Map();
+  calculatedBudgets.forEach(b => {
+    if (b.txns) {
+      b.txns.forEach(t => {
+        const id = t.transaction_id || t.id;
+        uniqueTxns.set(id, t);
+      });
+    }
+  });
+  const totalSpent = Array.from(uniqueTxns.values()).reduce((s, t) => s + t.amount, 0);
 
   if (loadingBudgets && budgets.length === 0) {
     return (

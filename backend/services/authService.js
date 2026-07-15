@@ -38,3 +38,45 @@ export const signToken = (user) => {
     { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
   );
 };
+
+export const updateUserProfile = async (user_id, name, email) => {
+  const existing = await User.findOne({ email, user_id: { $ne: user_id } });
+  if (existing) {
+    const err = new Error('Email already registered by another account');
+    err.statusCode = 409;
+    throw err;
+  }
+
+  const user = await User.findOneAndUpdate(
+    { user_id },
+    { name, email },
+    { new: true, runValidators: true }
+  );
+
+  if (!user) {
+    const err = new Error('User not found');
+    err.statusCode = 404;
+    throw err;
+  }
+
+  return user;
+};
+
+export const updateUserPassword = async (user_id, currentPassword, newPassword) => {
+  const user = await User.findOne({ user_id }).select('+password');
+  if (!user) {
+    const err = new Error('User not found');
+    err.statusCode = 404;
+    throw err;
+  }
+
+  const isMatch = await user.comparePassword(currentPassword);
+  if (!isMatch) {
+    const err = new Error('Current password is incorrect');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  user.password = newPassword;
+  await user.save();
+};
