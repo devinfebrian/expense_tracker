@@ -458,7 +458,8 @@ img {
 .dashboard-grid {
   display: grid;
   grid-template-columns: repeat(12, 1fr);
-  gap: var(--gutter)
+  gap: var(--gutter);
+  grid-auto-rows: 1fr
 }
 
 .col-span-4 {
@@ -581,7 +582,8 @@ img {
   background: var(--surface-container-lowest);
   border: 1px solid var(--outline-variant);
   padding: var(--space-lg);
-  border-radius: var(--radius-xl)
+  border-radius: var(--radius-xl);
+  height: 100%
 }
 
 .chart-header {
@@ -615,6 +617,43 @@ img {
   font-weight: 600;
   letter-spacing: .05em;
   text-transform: uppercase
+}
+
+.chart-scroll-btn {
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--outline-variant);
+  border-radius: var(--radius-sm);
+  background: var(--surface-container-lowest);
+  cursor: pointer;
+  color: var(--on-surface-variant)
+}
+
+.chart-scroll-btn:disabled {
+  opacity: .3;
+  cursor: not-allowed
+}
+
+.chart-scroll-btn:not(:disabled):hover {
+  background: var(--surface-container-high)
+}
+
+.chart-scroll-btn .material-symbols-outlined {
+  font-size: 16px
+}
+
+.chart-scroll-range {
+  font-size: 11px;
+  font-family: 'Inter', sans-serif;
+  font-weight: 600;
+  color: var(--on-surface-variant);
+  min-width: 24px;
+  text-align: center
 }
 
 .chart-link {
@@ -671,10 +710,12 @@ img {
 
 .line-chart-container {
   width: 100%;
-  height: 260px;
+  height: 100%;
+  min-height: 200px;
   display: flex;
   flex-direction: column;
-  justify-content: flex-end
+  justify-content: flex-end;
+  position: relative
 }
 
 .line-chart-svg {
@@ -683,11 +724,35 @@ img {
   overflow: visible
 }
 
+.line-chart-yaxis {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 24px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--on-surface-variant);
+  pointer-events: none
+}
+
+.line-chart-yaxis span {
+  transform: translateY(50%);
+  white-space: nowrap
+}
+
+.line-chart-yaxis + .line-chart-svg {
+  margin-left: 48px;
+  width: calc(100% - 48px)
+}
+
 .line-chart-labels {
   display: flex;
   justify-content: space-between;
   margin-top: var(--space-md);
-  padding: 0 2px;
+  padding: 0 2px 0 50px;
   font-size: 10px;
   font-weight: 600;
   letter-spacing: .05em;
@@ -698,27 +763,36 @@ img {
   flex: 1;
   display: flex;
   flex-direction: column;
-  align-items: center
+  align-items: center;
+  padding-top: 10px
 }
 
 .doughnut {
-  width: 192px;
-  height: 192px;
+  width: 140px;
+  height: 140px;
   border-radius: var(--radius-full);
-  border: 16px solid var(--primary);
   display: flex;
   align-items: center;
-  justify-content: center
+  justify-content: center;
+  position: relative
 }
 
 .doughnut-center {
+  width: 104px;
+  height: 104px;
+  border-radius: var(--radius-full);
+  background: var(--surface-container-lowest);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   text-align: center
 }
 
 .doughnut-value {
   font-family: 'JetBrains Mono', monospace;
   font-size: 20px;
-  font-weight: 500;
+  font-weight: 600;
   line-height: 24px
 }
 
@@ -726,7 +800,8 @@ img {
   font-size: 10px;
   font-weight: 600;
   letter-spacing: .05em;
-  color: var(--on-surface-variant)
+  color: var(--on-surface-variant);
+  margin-top: 2px
 }
 
 .category-list {
@@ -848,7 +923,7 @@ img {
 
 .filter-section {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: var(--space-md);
   margin-bottom: var(--space-lg)
 }
@@ -890,7 +965,22 @@ img {
   color: var(--on-surface);
   padding: 6px var(--space-md);
   outline: none;
-  width: 100%
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis
+}
+
+@keyframes marquee {
+  0% { transform: translateX(0) }
+  20% { transform: translateX(0) }
+  80% { transform: translateX(calc(-100% + 24px)) }
+  100% { transform: translateX(calc(-100% + 24px)) }
+}
+
+.filter-select:hover,
+.filter-select:focus {
+  text-overflow: clip;
+  animation: marquee 4s ease-in-out infinite
 }
 
 .txn-summary {
@@ -1364,6 +1454,11 @@ img {
 
   .page-header .btn-primary {
     align-self: flex-end
+  }
+
+  .page-actions {
+    width: 100%;
+    justify-content: flex-end
   }
 
   .page-title {

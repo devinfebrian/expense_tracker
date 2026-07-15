@@ -10,7 +10,76 @@ import { useAuthStore } from '../store/useAuthStore';
 import { getPeriodRange, getCurrentPeriod, getPrevPeriod, getNextPeriod, formatPeriodLabel } from '../utils/period';
 import getCategoryIcon from '../utils/categoryIcon';
 
-const CATEGORY_COLORS = ['#6750A4', '#EADDFF', '#79747E', '#322F35'];
+const CATEGORY_COLORS = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD', '#98D8C8', '#F7DC6F'];
+
+function SpendingTrendsChart({ labels, totals }) {
+  const windowSize = 5;
+  const [offset, setOffset] = useState(() => {
+    const today = new Date().getDate();
+    const maxOff = Math.max(labels.length - windowSize, 0);
+    return Math.max(0, Math.min(today - 3, maxOff));
+  });
+
+  const maxOff = Math.max(labels.length - windowSize, 0);
+  const windowLabels = labels.slice(offset, offset + windowSize);
+  const windowTotals = totals.slice(offset, offset + windowSize);
+  const windowMaxDaily = Math.max(...windowTotals, 1);
+  const windowLinePoints = windowTotals.length > 0
+    ? windowTotals.map((v, i) => {
+        const x = windowTotals.length > 1 ? (i / (windowTotals.length - 1)) * 100 : 50;
+        const y = 50 - (v / windowMaxDaily) * 44;
+        return `${x.toFixed(1)},${y.toFixed(1)}`;
+      }).join(' ')
+    : '';
+
+  return (
+    <>
+      <div className="chart-header">
+        <h4 className="chart-title">Spending Trends</h4>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+          <button
+            className="icon-btn chart-scroll-btn"
+            onClick={() => setOffset(Math.max(0, offset - 1))}
+            disabled={offset <= 0}
+            aria-label="Scroll left"
+          >
+            <span className="material-symbols-outlined">chevron_left</span>
+          </button>
+          <span className="chart-scroll-range">{windowLabels[0]}-{windowLabels[windowLabels.length - 1]}</span>
+          <button
+            className="icon-btn chart-scroll-btn"
+            onClick={() => setOffset(Math.min(maxOff, offset + 1))}
+            disabled={offset >= maxOff}
+            aria-label="Scroll right"
+          >
+            <span className="material-symbols-outlined">chevron_right</span>
+          </button>
+        </div>
+      </div>
+      <div className="line-chart-container">
+        <div className="line-chart-yaxis">
+          {[0, 25, 50, 75, 100].map(pct => (
+            <span key={pct}>Rp{Math.round(windowMaxDaily * pct / 100).toLocaleString('id-ID')}</span>
+          ))}
+        </div>
+        <svg viewBox="0 0 100 50" preserveAspectRatio="none" className="line-chart-svg">
+          <polyline
+            fill="none"
+            stroke="var(--primary)"
+            strokeWidth="0.6"
+            vectorEffect="non-scaling-stroke"
+            points={windowLinePoints}
+          />
+        </svg>
+        <div className="line-chart-labels">
+          {windowLabels.map(d => (
+            <span key={d}>{d}</span>
+          ))}
+        </div>
+      </div>
+    </>
+  );
+}
 
 export default function Dashboard() {
   const user = useAuthStore(state => state.user);
@@ -224,15 +293,6 @@ export default function Dashboard() {
     if (next) setSelectedPeriod(next);
   };
 
-  const maxDaily = Math.max(...dailyTotals, 1);
-  const linePoints = dailyTotals.length > 0
-    ? dailyTotals.map((v, i) => {
-        const x = dailyTotals.length > 1 ? (i / (dailyTotals.length - 1)) * 100 : 50;
-        const y = 50 - (v / maxDaily) * 44;
-        return `${x.toFixed(1)},${y.toFixed(1)}`;
-      }).join(' ')
-    : '';
-
   if (loading && transactions.length === 0) {
     return (
       <Layout>
@@ -312,48 +372,7 @@ export default function Dashboard() {
       </div>
 
       <div className="dashboard-grid">
-        <div className="chart-card col-span-4">
-          <h4 className="chart-title">Expense Categories</h4>
-          <div className="doughnut-container">
-            <div
-              className="doughnut"
-              style={{ background: doughnutGradient, position: 'relative' }}
-            >
-              <div className="doughnut-center">
-                <span className="doughnut-value">
-                  {categoryBreakdown.length > 0 ? `${categoryBreakdown[0].pct}%` : '0%'}
-                </span>
-                <p className="doughnut-label">{categoryBreakdown[0]?.label || 'Breakdown'}</p>
-              </div>
-            </div>
-          </div>
-          <div className="category-list">
-            {displayCategories.map((c, index) => (
-              <div key={c.label} className="category-item">
-                <span
-                  className="category-dot"
-                  style={{ background: CATEGORY_COLORS[index % CATEGORY_COLORS.length] }}
-                />
-                <span>{c.label}</span>
-                <span className="category-pct">{c.pct}%</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="chart-card col-span-8">
-          <div className="chart-header">
-            <h4 className="chart-title">Recent Expenses</h4>
-            <Link to="/transactions" className="chart-link">View All</Link>
-          </div>
-          <TransactionTable
-            transactions={periodTxns}
-            showActions={false}
-            limit={5}
-          />
-        </div>
-
-        <div className="chart-card" style={{ gridColumn: 'span 12' }}>
+        <div className="chart-card" style={{ gridColumn: 'span 12', gridRow: 1 }}>
           <div className="chart-header">
             <h4 className="chart-title">Budget Health</h4>
             <Link to="/budgets" className="chart-link">Manage</Link>
@@ -385,30 +404,44 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="chart-card" style={{ gridColumn: 'span 12' }}>
+        <div className="chart-card" style={{ gridColumn: 'span 4', gridRow: 2 }}>
+          <h4 className="chart-title">Expense Categories</h4>
+          <div className="doughnut-container">
+              <div
+                className="doughnut"
+                style={{ background: doughnutGradient }}
+              >
+                <div className="doughnut-center"></div>
+              </div>
+          </div>
+          <div className="category-list">
+            {displayCategories.map((c, index) => (
+              <div key={c.label} className="category-item">
+                <span
+                  className="category-dot"
+                  style={{ background: CATEGORY_COLORS[index % CATEGORY_COLORS.length] }}
+                />
+                <span>{c.label}</span>
+                <span className="category-pct">{c.pct}%</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="chart-card" style={{ gridColumn: 'span 4', gridRow: 3 }} key={selectedPeriod}>
+          <SpendingTrendsChart labels={dailyLabels} totals={dailyTotals} />
+        </div>
+
+        <div className="chart-card" style={{ gridColumn: 'span 8', gridRow: '2 / 4' }}>
           <div className="chart-header">
-            <h4 className="chart-title">Spending Trends</h4>
-            <div className="chart-legend">
-              <span className="legend-dot bg-primary" />
-              <span className="legend-label">Daily Spending</span>
-            </div>
+            <h4 className="chart-title">Recent Expenses</h4>
+            <Link to="/transactions" className="chart-link">View All</Link>
           </div>
-          <div className="line-chart-container">
-            <svg viewBox="0 0 100 50" preserveAspectRatio="none" className="line-chart-svg">
-              <polyline
-                fill="none"
-                stroke="var(--primary)"
-                strokeWidth="0.6"
-                vectorEffect="non-scaling-stroke"
-                points={linePoints}
-              />
-            </svg>
-            <div className="line-chart-labels">
-              {dailyLabels.filter((_, i) => i === 0 || i === dailyLabels.length - 1 || (i + 1) % 5 === 0 || dailyLabels.length <= 10).map(d => (
-                <span key={d}>{d}</span>
-              ))}
-            </div>
-          </div>
+          <TransactionTable
+            transactions={periodTxns}
+            showActions={false}
+            limit={5}
+          />
         </div>
       </div>
 

@@ -115,8 +115,20 @@ export default function Budgets() {
   const isCurrentPeriod = selectedPeriod === getCurrentPeriod('monthly');
 
   const isOverBudget = calculatedBudgets.some(b => b.percentage >= 100);
-  const totalBudget = calculatedBudgets.reduce((s, b) => s + b.limit, 0);
-  const totalSpent = calculatedBudgets.reduce((s, b) => s + b.spent, 0);
+  const monthlyBudgets = budgets.filter(b => b.type === 'monthly');
+  const totalBudget = monthlyBudgets.reduce((s, b) => s + b.limit, 0);
+
+  const budgetCategoryIds = new Set(monthlyBudgets.map(b => b.category_id));
+  const periodRange = getPeriodRange(selectedPeriod);
+  const totalSpent = periodRange
+    ? transactions
+        .filter(t => {
+          if (!budgetCategoryIds.has(t.category_id)) return false;
+          const d = new Date(t.date);
+          return d >= periodRange.start && d < periodRange.end;
+        })
+        .reduce((s, t) => s + t.amount, 0)
+    : 0;
 
   if (loadingBudgets && budgets.length === 0) {
     return (
