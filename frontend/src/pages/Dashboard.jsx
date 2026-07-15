@@ -25,6 +25,143 @@ const formatPeriodRange = (period) => {
   return `${range.start.toLocaleDateString('en-US', opts)} - ${end.toLocaleDateString('en-US', opts)}, ${end.getUTCFullYear()}`;
 };
 
+function SpendingTrendsChart({ labels, totals }) {
+  const [hoveredIndex, setHoveredIndex] = useState(null);
+
+  const maxDaily = Math.max(...totals, 1000);
+
+  const formatAmountLabel = (val) => {
+    if (val >= 1000000) return `Rp${(val / 1000000).toFixed(1)}M`;
+    if (val >= 1000) return `Rp${Math.round(val / 1000)}k`;
+    return `Rp${val}`;
+  };
+
+  return (
+    <>
+      <div className="chart-header">
+        <div>
+          <div className="chart-subtitle" style={{ fontSize: '22px', fontWeight: '700', color: 'var(--text-primary)' }}>
+            {formatCurrency(totals.reduce((s, t) => s + t, 0))}
+          </div>
+          <div className="chart-subtitle-label">Spending Overview</div>
+        </div>
+      </div>
+
+      <div className="line-chart-container" style={{ position: 'relative', minHeight: '220px', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', marginTop: '16px' }}>
+        <div className="line-chart-yaxis" style={{ position: 'absolute', left: 0, top: 0, bottom: '24px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', fontSize: '11px', fontWeight: '600', color: 'var(--text-secondary)', width: '60px', zIndex: 1 }}>
+          {[100, 75, 50, 25, 0].map(pct => (
+            <span key={pct} style={{ textAlign: 'left' }}>
+              Rp{Math.round(maxDaily * pct / 100).toLocaleString('id-ID')}
+            </span>
+          ))}
+        </div>
+
+        <svg 
+          viewBox="0 0 100 50" 
+          preserveAspectRatio="none" 
+          className="line-chart-svg" 
+          style={{ marginLeft: '70px', width: 'calc(100% - 70px)', height: '200px', overflow: 'visible' }}
+          onMouseLeave={() => setHoveredIndex(null)}
+        >
+          {totals.length > 0 && totals.map((v, i) => {
+            const N = totals.length;
+            const slotWidth = 100 / N;
+            const barWidth = slotWidth * 0.65;
+            const x = i * slotWidth + (slotWidth - barWidth) / 2;
+            const barHeight = (v / maxDaily) * 36;
+            const y = 50 - barHeight;
+            const isHovered = hoveredIndex === i;
+
+            const r = barWidth / 2;
+            let pathD = '';
+            if (barHeight > 0) {
+              if (barHeight <= r) {
+                pathD = `
+                  M ${x},50
+                  L ${x},${50 - barHeight}
+                  L ${x + barWidth},${50 - barHeight}
+                  L ${x + barWidth},50
+                  Z
+                `;
+              } else {
+                pathD = `
+                  M ${x},50
+                  L ${x},${y + r}
+                  A ${r},${r} 0 0,1 ${x + r},${y}
+                  L ${x + barWidth - r},${y}
+                  A ${r},${r} 0 0,1 ${x + barWidth},${y + r}
+                  L ${x + barWidth},50
+                  Z
+                `;
+              }
+            }
+
+            return (
+              <g key={i}>
+                <line 
+                  x1={x + barWidth / 2} 
+                  y1="0" 
+                  x2={x + barWidth / 2} 
+                  y2="50" 
+                  stroke="var(--border-light)" 
+                  strokeWidth="0.05" 
+                  strokeDasharray="1,1" 
+                />
+
+                {v > 0 && (
+                  <path
+                    d={pathD}
+                    fill={isHovered ? "var(--primary)" : "var(--primary-light)"}
+                    style={{ cursor: 'pointer', transition: 'fill 0.2s ease' }}
+                    onMouseEnter={() => setHoveredIndex(i)}
+                    onMouseMove={() => setHoveredIndex(i)}
+                  />
+                )}
+
+                <rect
+                  x={i * slotWidth}
+                  y="0"
+                  width={slotWidth}
+                  height="50"
+                  fill="transparent"
+                  style={{ cursor: 'pointer' }}
+                  onMouseEnter={() => setHoveredIndex(i)}
+                  onMouseMove={() => setHoveredIndex(i)}
+                />
+
+                {v > 0 && isHovered && (
+                  <text
+                    x={x + barWidth / 2}
+                    y={y - 2}
+                    textAnchor="middle"
+                    fontSize="3"
+                    fontWeight="700"
+                    fill="var(--primary)"
+                    style={{ pointerEvents: 'none', transition: 'fill 0.2s ease' }}
+                  >
+                    {formatAmountLabel(v)}
+                  </text>
+                )}
+              </g>
+            );
+          })}
+        </svg>
+
+        <div className="line-chart-labels" style={{ display: 'flex', justifyContent: 'space-between', marginLeft: '70px', width: 'calc(100% - 70px)', marginTop: '8px', padding: '0 4px', fontSize: '11px', fontWeight: '700', color: 'var(--text-secondary)' }}>
+          {labels.map((l, i) => {
+            const shouldShow = i === 0 || i === labels.length - 1 || l % 5 === 0;
+            return (
+              <span key={i} style={{ width: `${100 / labels.length}%`, textAlign: 'center', opacity: shouldShow ? 1 : 0 }}>
+                {l}
+              </span>
+            );
+          })}
+        </div>
+      </div>
+    </>
+  );
+}
+
 export default function Dashboard() {
   const user = useAuthStore(state => state.user);
   const transactions = useTransactionStore(state => state.transactions);
@@ -355,57 +492,11 @@ export default function Dashboard() {
       {/* Charts Row */}
       <div className="dashboard-grid" style={{ marginBottom: 'var(--gutter)' }}>
         <div className="chart-card col-span-8">
-            <div className="chart-header">
-            <div>
-              <div className="chart-subtitle">{formatCurrency(expenseTxns.reduce((s, t) => s + t.amount, 0))}</div>
-              <div className="chart-subtitle-label">Spending Overview</div>
-            </div>
-            <div className="chart-legend">
-              <span className="legend-dot bg-primary" />
-              <span className="legend-label">Daily Spending</span>
-            </div>
-          </div>
-          <div className="line-chart-container" onMouseLeave={handleLineLeave}>
-            <svg viewBox="0 0 100 50" preserveAspectRatio="none" className="line-chart-svg">
-              {dailyTotals.length > 0 && (
-                <>
-                  {dailyTotals.map((v, i) => {
-                    const N = dailyTotals.length;
-                    const barWidth = (100 / N) * 0.7;
-                    const x = i * (100 / N) + (100 / N) * 0.15;
-                    const barHeight = (v / maxDaily) * 40;
-                    const y = 50 - barHeight;
-                    const label = `${dailyLabels[i]} ${formatPeriodLabel(selectedPeriod).split(' ')[0]}`;
-                    return (
-                      <rect
-                        key={i}
-                        x={x}
-                        y={y}
-                        width={barWidth}
-                        height={Math.max(barHeight, 0.5)}
-                        fill={v > 0 ? "var(--primary)" : "var(--border-light)"}
-                        rx="0.4"
-                        style={{ cursor: 'pointer', transition: 'fill 0.2s' }}
-                        onMouseEnter={(e) => handleLineHover(e, v, label)}
-                        onMouseMove={(e) => handleLineHover(e, v, label)}
-                        className="bar-chart-rect"
-                      />
-                    );
-                  })}
-                </>
-              )}
-            </svg>
-            <div className="line-chart-labels">
-              {dailyLabels.filter((_, i) => i === 0 || i === dailyLabels.length - 1 || (i + 1) % 7 === 0 || dailyLabels.length <= 10).map((l, i) => (
-                <span key={i}>{l}</span>
-              ))}
-            </div>
-            {tooltip.visible && (
-              <div className="chart-tooltip visible" style={{ left: tooltip.x, top: tooltip.y }}>
-                {tooltip.label}: {formatCurrency(tooltip.value)}
-              </div>
-            )}
-          </div>
+          <SpendingTrendsChart 
+            labels={dailyLabels} 
+            totals={dailyTotals} 
+            selectedPeriod={selectedPeriod} 
+          />
         </div>
 
         <div className="chart-card col-span-4">
