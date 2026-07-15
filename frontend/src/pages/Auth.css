@@ -225,6 +225,28 @@
   text-decoration: underline;
 }
 
+@media (max-width: 480px) {
+  .auth-main {
+    padding: 72px 12px 32px;
+  }
+
+  .auth-card {
+    padding: 24px;
+  }
+
+  .auth-card-title {
+    font-size: 22px;
+  }
+
+  .auth-brand-title {
+    font-size: 28px;
+  }
+
+  .auth-input {
+    font-size: 16px;
+  }
+}
+
 /* Background elements */
 .auth-bg-patterns {
   position: fixed;

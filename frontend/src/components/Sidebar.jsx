@@ -1,7 +1,7 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth.js';
 
-export default function Sidebar() {
+export default function Sidebar({ onNavigate }) {
   const { pathname } = useLocation();
   const { user, logout } = useAuth();
   const navigate = useNavigate();
@@ -41,7 +41,7 @@ export default function Sidebar() {
               <span>{l.label}</span>
             </span>
           ) : (
-            <Link key={l.href} to={l.href} className={`sidebar-link ${pathname === l.href ? 'active' : ''}`}>
+            <Link key={l.href} to={l.href} className={`sidebar-link ${pathname === l.href ? 'active' : ''}`} onClick={onNavigate}>
               <span className="material-symbols-outlined">{l.icon}</span>
               <span>{l.label}</span>
             </Link>
@@ -50,7 +50,7 @@ export default function Sidebar() {
       </nav>
       <div className="sidebar-footer">
         <div className="sidebar-footer-row">
-          <Link to="/profile" className="sidebar-profile-row">
+          <Link to="/profile" className="sidebar-profile-row" onClick={onNavigate}>
             <div className="sidebar-avatar">
               {user?.avatar ? (
                 <img src={user.avatar} alt={user.name || 'User'} />

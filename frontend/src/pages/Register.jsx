@@ -68,10 +68,10 @@ export default function Register() {
       </header>
 
       <main className="auth-main">
-        <div className="auth-card-wrapper" style={{ maxWidth: '480px' }}>
-          <div className="auth-card" style={{ padding: '32px' }}>
+        <div className="auth-card-wrapper">
+          <div className="auth-card">
             <div className="auth-brand-center" style={{ marginBottom: '24px' }}>
-              <h1 className="auth-brand-title" style={{ fontSize: '32px' }}>Create Account</h1>
+              <h1 className="auth-brand-title">Create Account</h1>
             </div>
 
             {error && (

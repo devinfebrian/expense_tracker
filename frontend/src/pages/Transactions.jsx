@@ -42,24 +42,28 @@ export default function Transactions() {
     if (filterPeriod === 'all') return true;
     const d = new Date(t.date);
     const now = new Date();
-    if (filterPeriod === 'daily') return d.toDateString() === now.toDateString();
+    if (filterPeriod === 'daily') {
+      return d.getUTCFullYear() === now.getUTCFullYear() &&
+             d.getUTCMonth() === now.getUTCMonth() &&
+             d.getUTCDate() === now.getUTCDate();
+    }
     if (filterPeriod === 'weekly') {
-      const day = now.getDay();
+      const day = now.getUTCDay();
       const diff = (day + 6) % 7;
       const monday = new Date(now);
-      monday.setDate(now.getDate() - diff);
-      monday.setHours(0, 0, 0, 0);
+      monday.setUTCDate(now.getUTCDate() - diff);
+      monday.setUTCHours(0, 0, 0, 0);
       return d >= monday;
     }
-    if (filterPeriod === 'monthly') return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+    if (filterPeriod === 'monthly') return d.getUTCMonth() === now.getUTCMonth() && d.getUTCFullYear() === now.getUTCFullYear();
     if (filterPeriod === 'last7') {
       const w = new Date(now);
-      w.setDate(w.getDate() - 7);
+      w.setUTCDate(w.getUTCDate() - 7);
       return d >= w;
     }
     if (filterPeriod === 'last30') {
       const w = new Date(now);
-      w.setDate(w.getDate() - 30);
+      w.setUTCDate(w.getUTCDate() - 30);
       return d >= w;
     }
     return true;

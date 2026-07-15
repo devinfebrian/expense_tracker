@@ -39,17 +39,26 @@ export const createTransaction = async (user_id, { merchant, category, category_
     if (found) targetCategoryId = found.category_id;
   }
 
-  if (!merchant || !targetCategoryId || amount === undefined || !date) {
+  const trimmedMerchant = typeof merchant === 'string' ? merchant.trim() : '';
+  const parsedAmount = parseFloat(amount);
+
+  if (!trimmedMerchant || !targetCategoryId || amount === undefined || !date) {
     const err = new Error('Merchant, category, amount, and date are required');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  if (isNaN(parsedAmount) || parsedAmount <= 0) {
+    const err = new Error('Amount must be greater than 0');
     err.statusCode = 400;
     throw err;
   }
 
   const transaction = await Transaction.create({
     user_id,
-    merchant,
+    merchant: trimmedMerchant,
     category_id: targetCategoryId,
-    amount: parseFloat(amount),
+    amount: parsedAmount,
     date,
     notes: notes || '',
   });
@@ -83,9 +92,25 @@ export const updateTransaction = async (user_id, transaction_id, { merchant, cat
     if (found) targetCategoryId = found.category_id;
   }
 
-  if (merchant) transaction.merchant = merchant;
+  if (merchant !== undefined) {
+    const trimmedMerchant = typeof merchant === 'string' ? merchant.trim() : '';
+    if (!trimmedMerchant) {
+      const err = new Error('Merchant name cannot be empty');
+      err.statusCode = 400;
+      throw err;
+    }
+    transaction.merchant = trimmedMerchant;
+  }
   if (targetCategoryId) transaction.category_id = targetCategoryId;
-  if (amount !== undefined) transaction.amount = parseFloat(amount);
+  if (amount !== undefined) {
+    const parsedAmount = parseFloat(amount);
+    if (isNaN(parsedAmount) || parsedAmount <= 0) {
+      const err = new Error('Amount must be greater than 0');
+      err.statusCode = 400;
+      throw err;
+    }
+    transaction.amount = parsedAmount;
+  }
   if (date) transaction.date = date;
   if (notes !== undefined) transaction.notes = notes;
 
