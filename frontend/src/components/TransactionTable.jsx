@@ -63,7 +63,7 @@ export default function TransactionTable({
                   </span>
                 </td>
                 <td data-label="Date" className="text-on-surface-variant">{new Date(txn.date).toLocaleDateString('en-CA')}</td>
-                <td data-label="Amount" className={showActions ? 'text-center text-tertiary' : 'text-right text-tertiary'}>
+                <td data-label="Amount" className={showActions ? 'text-center text-error' : 'text-right text-error'}>
                   -Rp{txn.amount.toLocaleString('id-ID')}
                 </td>
                 {showActions && (

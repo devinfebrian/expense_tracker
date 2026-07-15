@@ -177,7 +177,6 @@ export default function Dashboard() {
 
   const [showModal, setShowModal] = useState(false);
   const [selectedPeriod, setSelectedPeriod] = useState(() => getCurrentPeriod('monthly'));
-  const [tooltip, setTooltip] = useState({ visible: false, x: 0, y: 0, value: 0, label: '' });
 
   useEffect(() => {
     loadTransactions();
@@ -199,14 +198,11 @@ export default function Dashboard() {
   const loading = loadingTxns || loadingBudgets;
 
     const {
-      totalIncome,
       totalExpenses,
-      totalBalance,
-      savings,
-      incomeChange,
+      periodExpenses,
+      todaySpent,
+      todayCount,
       expenseChange,
-      balanceChange,
-      savingsChange,
       expenseTxns,
       categoryBreakdown,
       recentTransactions,
@@ -217,13 +213,9 @@ export default function Dashboard() {
     const range = getPeriodRange(selectedPeriod);
     const prevRange = getPeriodRange(getPrevPeriod(selectedPeriod, 'monthly'));
 
-    const allIncome = transactions.filter(t => isIncomeCategory(t.category));
     const allExpenses = transactions.filter(t => !isIncomeCategory(t.category));
 
-    const totalIncome = allIncome.reduce((sum, t) => sum + t.amount, 0);
     const totalExpenses = allExpenses.reduce((sum, t) => sum + t.amount, 0);
-    const totalBalance = totalIncome - totalExpenses;
-    const savings = totalIncome - totalExpenses;
 
     const periodTxns = transactions.filter(t => {
       if (!range) return false;
@@ -231,9 +223,7 @@ export default function Dashboard() {
       return d >= range.start && d < range.end;
     });
     const expenseTxns = periodTxns.filter(t => !isIncomeCategory(t.category));
-    const incomeTxns = periodTxns.filter(t => isIncomeCategory(t.category));
 
-    const periodIncome = incomeTxns.reduce((sum, t) => sum + t.amount, 0);
     const periodExpenses = expenseTxns.reduce((sum, t) => sum + t.amount, 0);
 
     const prevPeriodTxns = transactions.filter(t => {
@@ -241,10 +231,7 @@ export default function Dashboard() {
       const d = new Date(t.date);
       return d >= prevRange.start && d < prevRange.end;
     });
-    const prevIncome = prevPeriodTxns.filter(t => isIncomeCategory(t.category)).reduce((sum, t) => sum + t.amount, 0);
     const prevExpenses = prevPeriodTxns.filter(t => !isIncomeCategory(t.category)).reduce((sum, t) => sum + t.amount, 0);
-    const prevBalance = prevIncome - prevExpenses;
-    const prevSavings = prevIncome - prevExpenses;
 
     const pctChange = (curr, prev) => {
       if (prev > 0) return parseFloat((((curr - prev) / prev) * 100).toFixed(1));
@@ -252,10 +239,20 @@ export default function Dashboard() {
       return 0;
     };
 
-    const incomeChange = pctChange(periodIncome, prevIncome);
     const expenseChange = pctChange(periodExpenses, prevExpenses);
-    const balanceChange = pctChange(totalBalance, prevBalance);
-    const savingsChange = pctChange(savings, prevSavings);
+
+    // Today's expenses
+    const today = new Date();
+    const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const todayEnd = new Date(todayStart.getTime() + 24 * 60 * 60 * 1000);
+    const todaySpent = expenseTxns.filter(t => {
+      const d = new Date(t.date);
+      return d >= todayStart && d < todayEnd;
+    }).reduce((sum, t) => sum + t.amount, 0);
+    const todayCount = expenseTxns.filter(t => {
+      const d = new Date(t.date);
+      return d >= todayStart && d < todayEnd;
+    }).length;
 
     // Category breakdown for expenses
     const categoriesMap = {};
@@ -298,7 +295,7 @@ export default function Dashboard() {
           ...style,
         };
       })
-      .slice(0, 4);
+      .slice(0, 5);
 
     // Daily totals for spending overview
     const dailyLabels = [];
@@ -321,14 +318,11 @@ export default function Dashboard() {
     }
 
     return {
-      totalIncome,
       totalExpenses,
-      totalBalance,
-      savings,
-      incomeChange,
+      periodExpenses,
+      todaySpent,
+      todayCount,
       expenseChange,
-      balanceChange,
-      savingsChange,
       expenseTxns,
       categoryBreakdown,
       recentTransactions,
@@ -351,30 +345,6 @@ export default function Dashboard() {
   };
 
   // Spending overview line chart (daily)
-  const maxDaily = Math.max(...dailyTotals, 1);
-  const dailyPoints = dailyTotals.map((v, i) => {
-    const x = dailyTotals.length > 1 ? (i / (dailyTotals.length - 1)) * 100 : 50;
-    const y = 50 - (v / maxDaily) * 40;
-    return `${x.toFixed(1)},${y.toFixed(1)}`;
-  }).join(' ');
-  const areaPoints = dailyPoints
-    ? `0,50 ${dailyPoints} 100,50`
-    : '';
-
-  const handleLineHover = (e, value, label) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    setTooltip({
-      visible: true,
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top,
-      value,
-      label,
-    });
-  };
-
-  const handleLineLeave = () => {
-    setTooltip(prev => ({ ...prev, visible: false }));
-  };
 
   const doughnutGradient = useMemo(() => {
     if (categoryBreakdown.length === 0) {
@@ -448,26 +418,6 @@ export default function Dashboard() {
       {/* Summary Cards */}
       <div className="facts-grid">
         <SummaryCard
-          label="Total Balance"
-          value={formatCurrency(totalBalance)}
-          icon="account_balance_wallet"
-          iconBg="var(--primary-light)"
-          iconColor="var(--primary)"
-          trend={`${balanceChange >= 0 ? '+' : ''}${balanceChange}%`}
-          trendDirection={balanceChange >= 0 ? 'up' : 'down'}
-          trendText="from last month"
-        />
-        <SummaryCard
-          label="Total Income"
-          value={formatCurrency(totalIncome)}
-          icon="payments"
-          iconBg="var(--secondary-light)"
-          iconColor="var(--secondary)"
-          trend={`${incomeChange >= 0 ? '+' : ''}${incomeChange}%`}
-          trendDirection={incomeChange >= 0 ? 'up' : 'down'}
-          trendText="from last month"
-        />
-        <SummaryCard
           label="Total Expenses"
           value={formatCurrency(totalExpenses)}
           icon="credit_card"
@@ -478,20 +428,29 @@ export default function Dashboard() {
           trendText="from last month"
         />
         <SummaryCard
-          label="Savings"
-          value={formatCurrency(savings)}
-          icon="savings"
-          iconBg="var(--info-light)"
-          iconColor="var(--info)"
-          trend={`${savingsChange >= 0 ? '+' : ''}${savingsChange}%`}
-          trendDirection={savingsChange >= 0 ? 'up' : 'down'}
+          label="This Month Spending"
+          value={formatCurrency(periodExpenses)}
+          icon="calendar_month"
+          iconBg="var(--secondary-light)"
+          iconColor="var(--secondary)"
+          trend={`${expenseChange >= 0 ? '+' : ''}${expenseChange}%`}
+          trendDirection={expenseChange >= 0 ? 'up' : 'down'}
           trendText="from last month"
+        />
+        <SummaryCard
+          label="Today Spending"
+          value={formatCurrency(todaySpent)}
+          icon="today"
+          iconBg="var(--warning-light)"
+          iconColor="var(--warning)"
+          trend={todayCount > 0 ? `${todayCount} transaction(s)` : 'No transactions'}
+          trendDirection={todaySpent > 0 ? 'up' : 'neutral'}
         />
       </div>
 
       {/* Charts Row */}
-      <div className="dashboard-grid" style={{ marginBottom: 'var(--gutter)' }}>
-        <div className="chart-card col-span-8">
+      <div className="dashboard-grid" style={{ marginBottom: 'var(--gutter)', alignItems: 'stretch' }}>
+        <div className="chart-card col-span-8" style={{ display: 'flex', flexDirection: 'column' }}>
           <SpendingTrendsChart 
             labels={dailyLabels} 
             totals={dailyTotals} 
@@ -499,7 +458,7 @@ export default function Dashboard() {
           />
         </div>
 
-        <div className="chart-card col-span-4">
+        <div className="chart-card col-span-4" style={{ display: 'flex', flexDirection: 'column' }}>
           <div className="chart-header">
             <h4 className="chart-title">Expense by Category</h4>
           </div>
@@ -509,6 +468,35 @@ export default function Dashboard() {
                 <span className="doughnut-value">{formatCurrency(expenseTxns.reduce((s, t) => s + t.amount, 0))}</span>
                 <p className="doughnut-label">Total</p>
               </div>
+              {categoryBreakdown.length > 0 && (
+                <div className="doughnut-labels-container">
+                  {categoryBreakdown.map((c, index) => {
+                    const startAngle = categoryBreakdown.slice(0, index).reduce((sum, cat) => sum + cat.pct, 0) * 3.6;
+                    const midAngle = startAngle + (c.pct * 3.6 / 2);
+                    const radius = 70;
+                    const x = Math.cos((midAngle - 90) * Math.PI / 180) * radius;
+                    const y = Math.sin((midAngle - 90) * Math.PI / 180) * radius;
+                    return (
+                      <span
+                        key={c.label + index}
+                        className="doughnut-pct-label"
+                        style={{
+                          position: 'absolute',
+                          left: `calc(50% + ${x}px)`,
+                          top: `calc(50% + ${y}px)`,
+                          transform: 'translate(-50%, -50%)',
+                          fontSize: '12px',
+                          fontWeight: '700',
+                          color: '#fff',
+                          textShadow: '0 1px 2px rgba(0,0,0,0.3)',
+                        }}
+                      >
+                        {c.pct}%
+                      </span>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
           <div className="category-list">
@@ -519,10 +507,11 @@ export default function Dashboard() {
             ) : (
               categoryBreakdown.map((c, index) => (
                 <div key={c.label + index} className="category-item">
-                  <span className="category-dot" style={{ background: c.color }} />
-                  <span>{c.label}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-sm)' }}>
+                    <span className="category-dot" style={{ background: c.color }} />
+                    <span>{c.label}</span>
+                  </div>
                   <span className="category-amount">{formatCurrency(c.amount)}</span>
-                  <span className="category-pct">{c.pct}%</span>
                 </div>
               ))
             )}
@@ -531,15 +520,15 @@ export default function Dashboard() {
       </div>
 
       {/* Bottom Row */}
-      <div className="dashboard-grid">
-        <div className="chart-card col-span-7">
+      <div className="dashboard-grid" style={{ alignItems: 'stretch' }}>
+        <div className="chart-card col-span-7" style={{ display: 'flex', flexDirection: 'column' }}>
           <div className="chart-header">
             <h4 className="chart-title">Recent Transactions</h4>
             <Link to="/transactions" className="chart-link">
               View all <span className="material-symbols-outlined" style={{ fontSize: 16 }}>chevron_right</span>
             </Link>
           </div>
-          <div className="transaction-list">
+          <div className="scrollable-container" style={{ maxHeight: '430px', flex: 1 }}>
             {recentTransactions.length === 0 ? (
               <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '24px 0' }}>
                 No transactions yet.
@@ -568,14 +557,14 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="chart-card col-span-5">
+        <div className="chart-card col-span-5" style={{ display: 'flex', flexDirection: 'column' }}>
           <div className="chart-header">
             <h4 className="chart-title">Budget Overview</h4>
             <Link to="/budgets" className="chart-link">
               View all <span className="material-symbols-outlined" style={{ fontSize: 16 }}>chevron_right</span>
             </Link>
           </div>
-          <div className="budget-list">
+          <div className="scrollable-container budget-scrollable" style={{ maxHeight: '430px', flex: 1 }}>
             {budgetOverview.length === 0 ? (
               <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '24px 0' }}>
                 No active budgets set.
