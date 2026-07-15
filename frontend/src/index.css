@@ -827,6 +827,10 @@ img {
   overflow: visible
 }
 
+.bar-chart-rect:hover {
+  fill: var(--primary-dark) !important;
+}
+
 .line-chart-yaxis {
   position: absolute;
   left: 0;

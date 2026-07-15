@@ -367,23 +367,28 @@ export default function Dashboard() {
           </div>
           <div className="line-chart-container" onMouseLeave={handleLineLeave}>
             <svg viewBox="0 0 100 50" preserveAspectRatio="none" className="line-chart-svg">
-              {areaPoints && (
+              {dailyTotals.length > 0 && (
                 <>
-                  <polygon points={areaPoints} className="line-chart-area" />
-                  <polyline points={dailyPoints} className="line-chart-line" />
                   {dailyTotals.map((v, i) => {
-                    const x = dailyTotals.length > 1 ? (i / (dailyTotals.length - 1)) * 100 : 50;
-                    const y = 50 - (v / maxDaily) * 40;
+                    const N = dailyTotals.length;
+                    const barWidth = (100 / N) * 0.7;
+                    const x = i * (100 / N) + (100 / N) * 0.15;
+                    const barHeight = (v / maxDaily) * 40;
+                    const y = 50 - barHeight;
                     const label = `${dailyLabels[i]} ${formatPeriodLabel(selectedPeriod).split(' ')[0]}`;
                     return (
-                      <circle
+                      <rect
                         key={i}
-                        cx={x}
-                        cy={y}
-                        r="1.2"
-                        className="line-chart-dot"
+                        x={x}
+                        y={y}
+                        width={barWidth}
+                        height={Math.max(barHeight, 0.5)}
+                        fill={v > 0 ? "var(--primary)" : "var(--border-light)"}
+                        rx="0.4"
+                        style={{ cursor: 'pointer', transition: 'fill 0.2s' }}
                         onMouseEnter={(e) => handleLineHover(e, v, label)}
                         onMouseMove={(e) => handleLineHover(e, v, label)}
+                        className="bar-chart-rect"
                       />
                     );
                   })}
