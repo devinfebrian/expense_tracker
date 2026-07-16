@@ -34,6 +34,8 @@ export default function Budgets() {
     loadCategories();
   }, [loadBudgets, loadTransactions, loadCategories, user, selectedPeriod]);
 
+  const [activeTab, setActiveTab] = useState('monthly'); // 'all', 'monthly', 'weekly', 'daily'
+
   const calculatedBudgets = budgets.map(b => {
     let range;
     if (b.type === 'daily') {
@@ -132,12 +134,18 @@ export default function Budgets() {
   const isCurrentPeriod = selectedPeriod === getCurrentPeriod('monthly');
 
   const isOverBudget = calculatedBudgets.some(b => b.percentage >= 100);
-  const monthlyBudgetsOnly = calculatedBudgets.filter(b => !b.type || b.type === 'monthly');
-  const totalBudget = monthlyBudgetsOnly.reduce((s, b) => s + b.limit, 0);
+
+  // Filter budgets for calculation based on the active tab
+  const summaryBudgets = calculatedBudgets.filter(b => {
+    if (activeTab === 'monthly') return !b.type || b.type === 'monthly';
+    return b.type === activeTab;
+  });
+
+  const totalBudget = summaryBudgets.reduce((s, b) => s + b.limit, 0);
 
   // Avoid double-counting transactions that fall into multiple budgets
   const uniqueTxns = new Map();
-  monthlyBudgetsOnly.forEach(b => {
+  summaryBudgets.forEach(b => {
     if (b.txns) {
       b.txns.forEach(t => {
         const id = t.transaction_id || t.id;
@@ -146,6 +154,67 @@ export default function Budgets() {
     }
   });
   const totalSpent = Array.from(uniqueTxns.values()).reduce((s, t) => s + t.amount, 0);
+
+  const renderBudgetGrid = (budgetsList, showCta = false) => {
+    return (
+      <div className="budget-grid" style={{ marginBottom: '24px' }}>
+        {budgetsList.map(b => {
+          const pct = Math.min(b.percentage, 100);
+          const warn = b.percentage >= 100;
+          return (
+            <div key={b.budget_id || b.id} className={`budget-card ${warn ? 'card-warning' : ''}`} style={{ backgroundColor: b.bg, borderLeft: `4px solid ${b.color}` }}>
+              <div className="budget-card-header">
+                <div>
+                  <h3 className="budget-card-name" style={{ color: b.color }}>{b.category_name}</h3>
+                  <p className="budget-card-period">{(b.type || 'monthly')?.toUpperCase()}</p>
+                </div>
+                {isCurrentPeriod && (
+                  <div className="budget-card-actions">
+                    <button className="icon-btn" onClick={() => openEdit(b)} style={{ marginRight: '4px' }}>
+                      <span className="material-symbols-outlined">edit</span>
+                    </button>
+                    <button className="icon-btn text-tertiary" onClick={() => handleDelete(b.budget_id || b.id)}>
+                      <span className="material-symbols-outlined">delete</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+              <div className="budget-card-amounts">
+                <span className={`budget-card-spent ${warn ? 'text-error' : 'text-secondary'}`}>
+                  Rp{b.spent.toLocaleString('id-ID')}
+                </span>
+                <span className="budget-card-limit">/ Rp{b.limit.toLocaleString('id-ID')}</span>
+              </div>
+              <div className="progress-bar">
+                <div className={`progress-fill ${warn ? 'bg-danger' : 'bg-secondary'}`} style={{ width: `${pct}%`, ...(warn ? { background: 'var(--danger)' } : {}) }} />
+              </div>
+              <div className="budget-card-status" style={{ marginTop: '8px' }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>{b.icon}</span>
+                  {b.category_name}
+                </span>
+                <span className={warn ? 'text-error' : ''} style={{ fontWeight: 600 }}>{b.status}</span>
+              </div>
+            </div>
+          );
+        })}
+        {showCta && isCurrentPeriod && (
+          <div className="budget-card card-cta" onClick={openAdd}>
+            <span className="material-symbols-outlined cta-icon">add_circle</span>
+            <h3 className="cta-text">Create New Budget</h3>
+            <p className="cta-sub">Set spending limits for any category</p>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const getBudgetsByPeriodType = (type) => {
+    return calculatedBudgets.filter(b => {
+      if (type === 'monthly') return !b.type || b.type === 'monthly';
+      return b.type === type;
+    });
+  };
 
   if (loadingBudgets && budgets.length === 0) {
     return (
@@ -198,11 +267,36 @@ export default function Budgets() {
         </div>
       </div>
 
+      {/* Period Tabs Selector */}
+      <div className="tab-container" style={{ display: 'flex', gap: '8px', marginBottom: '24px', borderBottom: '1px solid var(--border)', paddingBottom: '12px', flexWrap: 'wrap' }}>
+        {['monthly', 'weekly', 'daily'].map(tab => (
+          <button
+            key={tab}
+            className={`tab-btn ${activeTab === tab ? 'active' : ''}`}
+            onClick={() => setActiveTab(tab)}
+            style={{
+              padding: '8px 16px',
+              borderRadius: 'var(--radius-md)',
+              fontWeight: '600',
+              fontSize: '14px',
+              textTransform: 'capitalize',
+              backgroundColor: activeTab === tab ? 'var(--primary)' : 'transparent',
+              color: activeTab === tab ? '#fff' : 'var(--text-secondary)',
+              border: activeTab === tab ? '1px solid var(--primary)' : '1px solid var(--border)',
+              transition: 'all 0.2s',
+              cursor: 'pointer'
+            }}
+          >
+            {tab}
+          </button>
+        ))}
+      </div>
+
       <div className="budget-hero">
-        <SummaryCard label="TOTAL BUDGET" value={`Rp${totalBudget.toLocaleString('id-ID')}`} />
-        <SummaryCard label="TOTAL SPENT" value={`Rp${totalSpent.toLocaleString('id-ID')}`} />
+        <SummaryCard label={`TOTAL BUDGET (${activeTab.toUpperCase()})`} value={`Rp${totalBudget.toLocaleString('id-ID')}`} />
+        <SummaryCard label={`TOTAL SPENT (${activeTab.toUpperCase()})`} value={`Rp${totalSpent.toLocaleString('id-ID')}`} />
         <SummaryCard
-          label="REMAINING"
+          label={`REMAINING (${activeTab.toUpperCase()})`}
           value={`Rp${(totalBudget - totalSpent).toLocaleString('id-ID')}`}
           valueClass={totalBudget - totalSpent < 0 ? 'text-tertiary' : ''}
         />
@@ -215,57 +309,8 @@ export default function Budgets() {
         </div>
       )}
 
-      <div className="budget-grid">
-        {calculatedBudgets.map(b => {
-          const pct = Math.min(b.percentage, 100);
-          const warn = b.percentage >= 100;
-          return (
-            <div key={b.budget_id || b.id} className={`budget-card ${warn ? 'card-warning' : ''}`} style={{ backgroundColor: b.bg, borderLeft: `4px solid ${b.color}` }}>
-              <div className="budget-card-header">
-                <div>
-                  <h3 className="budget-card-name" style={{ color: b.color }}>{b.category_name}</h3>
-                  <p className="budget-card-period">{(b.type)?.toUpperCase()}</p>
-                </div>
-                {isCurrentPeriod && (
-                  <div className="budget-card-actions">
-                    <button className="icon-btn" onClick={() => openEdit(b)} style={{ marginRight: '4px' }}>
-                      <span className="material-symbols-outlined">edit</span>
-                    </button>
-                    <button className="icon-btn text-tertiary" onClick={() => handleDelete(b.budget_id || b.id)}>
-                      <span className="material-symbols-outlined">delete</span>
-                    </button>
-                  </div>
-                )}
-              </div>
-              <div className="budget-card-amounts">
-                <span className={`budget-card-spent ${warn ? 'text-error' : 'text-secondary'}`}>
-                  Rp{b.spent.toLocaleString('id-ID')}
-                </span>
-                <span className="budget-card-limit">/ Rp{b.limit.toLocaleString('id-ID')}</span>
-              </div>
-              <div className="progress-bar">
-                <div className={`progress-fill ${warn ? 'bg-danger' : 'bg-secondary'}`} style={{ width: `${pct}%`, ...(warn ? { background: 'var(--danger)' } : {}) }} />
-              </div>
-              <div className="budget-card-status" style={{ marginTop: '8px' }}>
-                <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>{b.icon}</span>
-                  {b.category_name}
-                </span>
-                <span className={warn ? 'text-error' : ''} style={{ fontWeight: 600 }}>{b.status}</span>
-              </div>
-            </div>
-          );
-        })}
-
-        {isCurrentPeriod && (
-          <div className="budget-card card-cta" onClick={openAdd}>
-            <span className="material-symbols-outlined cta-icon">add_circle</span>
-            <h3 className="cta-text">Create New Budget</h3>
-            <p className="cta-sub">Set spending limits for any category</p>
-          </div>
-        )}
-      </div>
-
+      {/* Render selected filtered grid */}
+      {renderBudgetGrid(getBudgetsByPeriodType(activeTab), true)}
       <BudgetModal
         isOpen={showModal}
         editingItem={editing}
