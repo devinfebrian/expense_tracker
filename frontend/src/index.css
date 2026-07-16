@@ -314,7 +314,9 @@ img {
 }
 
 @media (max-width: 479px) {
-  --sidebar-width: 260px;
+  :root {
+    --sidebar-width: 260px;
+  }
 }
 
 .sidebar-brand {
@@ -855,8 +857,6 @@ body.modal-open .sidebar-link.active {
 
   .doughnut-value {
     font-size: 24px;
-  }
-}
   }
 }
 
