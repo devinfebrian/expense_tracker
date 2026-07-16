@@ -1,7 +1,7 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth.js';
 
-export default function Sidebar({ onNavigate }) {
+export default function Sidebar({ collapsed = false, onToggleCollapse = () => {}, onNavigate }) {
   const { pathname } = useLocation();
   const { user, logout } = useAuth();
   const navigate = useNavigate();

@@ -132,11 +132,12 @@ export default function Budgets() {
   const isCurrentPeriod = selectedPeriod === getCurrentPeriod('monthly');
 
   const isOverBudget = calculatedBudgets.some(b => b.percentage >= 100);
-  const totalBudget = calculatedBudgets.reduce((s, b) => s + b.limit, 0);
+  const monthlyBudgetsOnly = calculatedBudgets.filter(b => !b.type || b.type === 'monthly');
+  const totalBudget = monthlyBudgetsOnly.reduce((s, b) => s + b.limit, 0);
 
   // Avoid double-counting transactions that fall into multiple budgets
   const uniqueTxns = new Map();
-  calculatedBudgets.forEach(b => {
+  monthlyBudgetsOnly.forEach(b => {
     if (b.txns) {
       b.txns.forEach(t => {
         const id = t.transaction_id || t.id;
