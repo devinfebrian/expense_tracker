@@ -255,8 +255,7 @@ export default function Dashboard() {
           percentage,
           ...style,
         };
-      })
-      .slice(0, 5);
+      });
 
     // Daily totals for spending overview
     const dailyLabels = [];
@@ -349,8 +348,8 @@ export default function Dashboard() {
       </div>
 
       {/* Charts Row */}
-      <div className="dashboard-grid" style={{ marginBottom: 'var(--gutter)' }}>
-        <div className="chart-card col-span-8">
+      <div className="dashboard-grid" style={{ marginBottom: 'var(--gutter)', alignItems: 'stretch' }}>
+        <div className="chart-card col-span-8" style={{ display: 'flex', flexDirection: 'column' }}>
           <SpendingTrendsChart
             labels={dailyLabels}
             totals={dailyTotals}
@@ -459,7 +458,7 @@ export default function Dashboard() {
 
       {/* Bottom Row */}
       <div className="dashboard-grid" style={{ alignItems: 'stretch' }}>
-        <div className="chart-card col-span-7" style={{ display: 'flex', flexDirection: 'column' }}>
+        <div className="chart-card col-span-8" style={{ display: 'flex', flexDirection: 'column' }}>
           <div className="chart-header">
             <h4 className="chart-title">Transactions</h4>
             <Link to="/transactions" className="chart-link">
@@ -494,7 +493,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="chart-card col-span-5" style={{ display: 'flex', flexDirection: 'column' }}>
+        <div className="chart-card col-span-4" style={{ display: 'flex', flexDirection: 'column' }}>
           <div className="chart-header">
             <h4 className="chart-title">Budget Overview</h4>
             <Link to="/budgets" className="chart-link">

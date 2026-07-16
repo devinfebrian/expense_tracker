@@ -23,27 +23,31 @@ export default function Sidebar({ onNavigate }) {
   };
 
   return (
-    <aside className="sidebar">
-      <div className="sidebar-brand">
-        <div className="sidebar-logo">
-          <span className="material-symbols-outlined">account_balance_wallet</span>
-        </div>
-        <div>
-          <h1 className="sidebar-title">Duidku</h1>
-          <p className="sidebar-subtitle">Track. Understand. Save.</p>
+    <aside className={`sidebar ${collapsed ? 'collapsed' : ''}`}>
+      <div className="sidebar-header">
+        <div className="sidebar-brand">
+          <div className="sidebar-logo">
+            <span className="material-symbols-outlined">account_balance_wallet</span>
+          </div>
+          {!collapsed && (
+            <div>
+              <h1 className="sidebar-title">Duidku</h1>
+              <p className="sidebar-subtitle">Track. Understand. Save.</p>
+            </div>
+          )}
         </div>
       </div>
       <nav className="sidebar-nav">
         {mainLinks.map(l =>
           l.disabled ? (
-            <span key={l.label} className="sidebar-link" style={{ opacity: 0.5, cursor: 'not-allowed' }}>
+            <span key={l.label} className="sidebar-link" style={{ opacity: 0.5, cursor: 'not-allowed' }} title={l.label}>
               <span className="material-symbols-outlined">{l.icon}</span>
-              <span>{l.label}</span>
+              {!collapsed && <span>{l.label}</span>}
             </span>
           ) : (
             <Link key={l.href} to={l.href} className={`sidebar-link ${pathname === l.href ? 'active' : ''}`} onClick={onNavigate}>
               <span className="material-symbols-outlined">{l.icon}</span>
-              <span>{l.label}</span>
+              {!collapsed && <span>{l.label}</span>}
             </Link>
           )
         )}
@@ -60,13 +64,22 @@ export default function Sidebar({ onNavigate }) {
                 </span>
               )}
             </div>
-            <span className="sidebar-profile-label">{user?.name || 'User'}</span>
+            {!collapsed && <span className="sidebar-profile-label">{user?.name || 'User'}</span>}
           </Link>
           <button onClick={handleLogout} className="sidebar-btn" title="Log out">
             <span className="material-symbols-outlined">logout</span>
           </button>
         </div>
       </div>
+      <button
+        className="sidebar-collapse-toggle"
+        onClick={onToggleCollapse}
+        title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+      >
+        <span className="material-symbols-outlined">
+          {collapsed ? 'chevron_right' : 'chevron_left'}
+        </span>
+      </button>
     </aside>
   );
 }
