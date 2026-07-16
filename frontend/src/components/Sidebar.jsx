@@ -40,7 +40,7 @@ export default function Sidebar({ collapsed = false, onToggleCollapse = () => {}
       <nav className="sidebar-nav">
         {mainLinks.map(l =>
           l.disabled ? (
-            <span key={l.label} className="sidebar-link" style={{ opacity: 0.5, cursor: 'not-allowed' }} title={l.label}>
+            <span key={l.href} className="sidebar-link" style={{ opacity: 0.5, cursor: 'not-allowed' }} title={l.label}>
               <span className="material-symbols-outlined">{l.icon}</span>
               {!collapsed && <span>{l.label}</span>}
             </span>
@@ -60,7 +60,7 @@ export default function Sidebar({ collapsed = false, onToggleCollapse = () => {}
                 <img src={user.avatar} alt={user.name || 'User'} />
               ) : (
                 <span className="sidebar-avatar-fallback">
-                  {(user?.name || 'U').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                  {(user?.name || 'U').split(' ').filter(Boolean).map(n => n[0]).join('').slice(0, 2).toUpperCase()}
                 </span>
               )}
             </div>
