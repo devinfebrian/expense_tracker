@@ -8,6 +8,8 @@ import { useTransactionStore } from '../store/useTransactionStore';
 import { getCurrentPeriod, getPeriodRange, formatPeriodLabel, getPrevPeriod, getNextPeriod } from '../utils/period';
 import getCategoryIcon, { getCategoryStyle } from '../utils/categoryIcon';
 
+const TYPE_LABELS = { all: 'All', monthly: 'Monthly', weekly: 'Weekly', daily: 'Daily' };
+
 export default function Budgets() {
   const user = useAuthStore(state => state.user);
 
@@ -27,6 +29,7 @@ export default function Budgets() {
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState(null);
   const [error, setError] = useState('');
+  const [filterType, setFilterType] = useState('all');
 
   useEffect(() => {
     loadBudgets(user, selectedPeriod);
@@ -82,6 +85,10 @@ export default function Budgets() {
     };
   });
 
+  const filteredBudgets = filterType === 'all'
+    ? calculatedBudgets
+    : calculatedBudgets.filter(b => b.type === filterType);
+
   const openAdd = () => {
     setEditing(null);
     setError('');
@@ -131,12 +138,11 @@ export default function Budgets() {
 
   const isCurrentPeriod = selectedPeriod === getCurrentPeriod('monthly');
 
-  const isOverBudget = calculatedBudgets.some(b => b.percentage >= 100);
-  const totalBudget = calculatedBudgets.reduce((s, b) => s + b.limit, 0);
+  const isOverBudget = filteredBudgets.some(b => b.percentage >= 100);
+  const totalBudget = filteredBudgets.reduce((s, b) => s + b.limit, 0);
 
-  // Avoid double-counting transactions that fall into multiple budgets
   const uniqueTxns = new Map();
-  calculatedBudgets.forEach(b => {
+  filteredBudgets.forEach(b => {
     if (b.txns) {
       b.txns.forEach(t => {
         const id = t.transaction_id || t.id;
@@ -145,6 +151,16 @@ export default function Budgets() {
     }
   });
   const totalSpent = Array.from(uniqueTxns.values()).reduce((s, t) => s + t.amount, 0);
+
+  const groupByType = (list) => {
+    const groups = {};
+    list.forEach(b => {
+      const t = b.type || 'monthly';
+      if (!groups[t]) groups[t] = [];
+      groups[t].push(b);
+    });
+    return groups;
+  };
 
   if (loadingBudgets && budgets.length === 0) {
     return (
@@ -209,6 +225,18 @@ export default function Budgets() {
         />
       </div>
 
+      <div className="budget-type-tabs">
+        {['all', 'monthly', 'weekly', 'daily'].map(t => (
+          <button
+            key={t}
+            className={`budget-type-tab ${filterType === t ? 'active' : ''}`}
+            onClick={() => setFilterType(t)}
+          >
+            {TYPE_LABELS[t]}
+          </button>
+        ))}
+      </div>
+
       {isOverBudget && (
         <div className="alert alert-warning">
           <span className="material-symbols-outlined">warning</span>
@@ -217,52 +245,111 @@ export default function Budgets() {
       )}
 
       <div className="budget-grid">
-        {[...calculatedBudgets].sort((a, b) => {
-          const typeOrder = { daily: 0, weekly: 1, monthly: 2 };
-          if (a.category_id !== b.category_id) return a.category_id.localeCompare(b.category_id);
-          return (typeOrder[a.type] ?? 3) - (typeOrder[b.type] ?? 3);
-        }).map(b => {
-          const pct = Math.min(b.percentage, 100);
-          const warn = b.percentage >= 100;
-          return (
-            <div key={b.budget_id || b.id} className={`budget-card ${warn ? 'card-warning' : ''}`} style={{ backgroundColor: b.bg, borderLeft: `4px solid ${b.color}` }}>
-              <div className="budget-card-header">
-                <div>
-                  <h3 className="budget-card-name" style={{ color: b.color }}>{b.category_name}</h3>
-                  <p className="budget-card-period">{(b.type)?.toUpperCase()}</p>
-                </div>
-                {isCurrentPeriod && (
-                  <div className="budget-card-actions">
-                    <button className="icon-btn" onClick={() => openEdit(b)} style={{ marginRight: '4px' }}>
-                      <span className="material-symbols-outlined">edit</span>
-                    </button>
-                    <button className="icon-btn text-tertiary" onClick={() => handleDelete(b.budget_id || b.id)}>
-                      <span className="material-symbols-outlined">delete</span>
-                    </button>
-                  </div>
-                )}
-              </div>
-              <div className="budget-card-amounts">
-                <span className={`budget-card-spent ${warn ? 'text-error' : 'text-secondary'}`}>
-                  Rp{b.spent.toLocaleString('id-ID')}
-                </span>
-                <span className="budget-card-limit">/ Rp{b.limit.toLocaleString('id-ID')}</span>
-              </div>
-              <div className="progress-bar">
-                <div className={`progress-fill ${warn ? 'bg-danger' : 'bg-secondary'}`} style={{ width: `${pct}%`, ...(warn ? { background: 'var(--danger)' } : {}) }} />
-              </div>
-              <div className="budget-card-status" style={{ marginTop: '8px' }}>
-                <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>{b.icon}</span>
-                  {b.category_name}
-                </span>
-                <span className={warn ? 'text-error' : ''} style={{ fontWeight: 600 }}>{b.status}</span>
+        {filterType === 'all' ? (
+          Object.entries(groupByType(filteredBudgets)).map(([type, items]) => (
+            <div key={type} className="budget-group">
+              <h3 className="budget-group-title">{TYPE_LABELS[type]} Budgets</h3>
+              <div className="budget-group-grid">
+                {items.sort((a, b) => {
+                  if (a.category_id !== b.category_id) return a.category_id.localeCompare(b.category_id);
+                  return 0;
+                }).map(b => {
+                  const pct = Math.min(b.percentage, 100);
+                  const warn = b.percentage >= 100;
+                  return (
+                    <div key={b.budget_id || b.id} className={`budget-card ${warn ? 'card-warning' : ''}`} style={{ backgroundColor: b.bg, borderLeft: `4px solid ${b.color}` }}>
+                      <div className="budget-card-header">
+                        <div>
+                          <h3 className="budget-card-name" style={{ color: b.color }}>{b.category_name}</h3>
+                          <p className="budget-card-period">{(b.type)?.toUpperCase()}</p>
+                        </div>
+                        {isCurrentPeriod && (
+                          <div className="budget-card-actions">
+                            <button className="icon-btn" onClick={() => openEdit(b)} style={{ marginRight: '4px' }}>
+                              <span className="material-symbols-outlined">edit</span>
+                            </button>
+                            <button className="icon-btn text-tertiary" onClick={() => handleDelete(b.budget_id || b.id)}>
+                              <span className="material-symbols-outlined">delete</span>
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                      <div className="budget-card-amounts">
+                        <span className={`budget-card-spent ${warn ? 'text-error' : 'text-secondary'}`}>
+                          Rp{b.spent.toLocaleString('id-ID')}
+                        </span>
+                        <span className="budget-card-limit">/ Rp{b.limit.toLocaleString('id-ID')}</span>
+                      </div>
+                      <div className="progress-bar">
+                        <div className={`progress-fill ${warn ? 'bg-danger' : 'bg-secondary'}`} style={{ width: `${pct}%`, ...(warn ? { background: 'var(--danger)' } : {}) }} />
+                      </div>
+                      <div className="budget-card-status" style={{ marginTop: '8px' }}>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>{b.icon}</span>
+                          {b.category_name}
+                        </span>
+                        <span className={warn ? 'text-error' : ''} style={{ fontWeight: 600 }}>{b.status}</span>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
-          );
-        })}
+          ))
+        ) : (
+          filteredBudgets.sort((a, b) => {
+            if (a.category_id !== b.category_id) return a.category_id.localeCompare(b.category_id);
+            return 0;
+          }).map(b => {
+            const pct = Math.min(b.percentage, 100);
+            const warn = b.percentage >= 100;
+            return (
+              <div key={b.budget_id || b.id} className={`budget-card ${warn ? 'card-warning' : ''}`} style={{ backgroundColor: b.bg, borderLeft: `4px solid ${b.color}` }}>
+                <div className="budget-card-header">
+                  <div>
+                    <h3 className="budget-card-name" style={{ color: b.color }}>{b.category_name}</h3>
+                    <p className="budget-card-period">{(b.type)?.toUpperCase()}</p>
+                  </div>
+                  {isCurrentPeriod && (
+                    <div className="budget-card-actions">
+                      <button className="icon-btn" onClick={() => openEdit(b)} style={{ marginRight: '4px' }}>
+                        <span className="material-symbols-outlined">edit</span>
+                      </button>
+                      <button className="icon-btn text-tertiary" onClick={() => handleDelete(b.budget_id || b.id)}>
+                        <span className="material-symbols-outlined">delete</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+                <div className="budget-card-amounts">
+                  <span className={`budget-card-spent ${warn ? 'text-error' : 'text-secondary'}`}>
+                    Rp{b.spent.toLocaleString('id-ID')}
+                  </span>
+                  <span className="budget-card-limit">/ Rp{b.limit.toLocaleString('id-ID')}</span>
+                </div>
+                <div className="progress-bar">
+                  <div className={`progress-fill ${warn ? 'bg-danger' : 'bg-secondary'}`} style={{ width: `${pct}%`, ...(warn ? { background: 'var(--danger)' } : {}) }} />
+                </div>
+                <div className="budget-card-status" style={{ marginTop: '8px' }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>{b.icon}</span>
+                    {b.category_name}
+                  </span>
+                  <span className={warn ? 'text-error' : ''} style={{ fontWeight: 600 }}>{b.status}</span>
+                </div>
+              </div>
+            );
+          })
+        )}
 
-        {isCurrentPeriod && (
+        {isCurrentPeriod && filterType !== 'all' && (
+          <div className="budget-card card-cta" onClick={openAdd}>
+            <span className="material-symbols-outlined cta-icon">add_circle</span>
+            <h3 className="cta-text">Create New {TYPE_LABELS[filterType]} Budget</h3>
+            <p className="cta-sub">Set spending limits for any category</p>
+          </div>
+        )}
+        {isCurrentPeriod && filterType === 'all' && (
           <div className="budget-card card-cta" onClick={openAdd}>
             <span className="material-symbols-outlined cta-icon">add_circle</span>
             <h3 className="cta-text">Create New Budget</h3>
