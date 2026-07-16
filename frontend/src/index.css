@@ -1381,6 +1381,29 @@ body.modal-open .sidebar-link.active {
   overflow: visible;
 }
 
+.chart-scroll-container {
+  scrollbar-width: thin;
+}
+
+.chart-scroll-container::-webkit-scrollbar {
+  height: 8px;
+  display: block;
+}
+
+.chart-scroll-container::-webkit-scrollbar-track {
+  background: var(--border-light);
+  border-radius: 4px;
+}
+
+.chart-scroll-container::-webkit-scrollbar-thumb {
+  background: var(--text-secondary);
+  border-radius: 4px;
+}
+
+.chart-scroll-container::-webkit-scrollbar-thumb:hover {
+  background: var(--text-primary);
+}
+
 .line-chart-area {
   fill: rgba(91, 108, 245, 0.08);
   stroke: none;
@@ -2089,6 +2112,35 @@ body.modal-open .sidebar-link.active {
 .budget-hero .summary-card,
 .txn-summary .summary-card {
   min-width: unset;
+}
+
+.budget-type-tabs {
+  display: flex;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-lg);
+}
+
+.budget-type-tab {
+  padding: var(--space-sm) var(--space-md);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.budget-type-tab:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.budget-type-tab.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: white;
 }
 
 .budget-grid {

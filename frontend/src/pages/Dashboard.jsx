@@ -1,7 +1,6 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import Layout from '../components/Layout';
-import SummaryCard from '../components/SummaryCard';
 import TransactionModal from '../components/TransactionModal';
 import { useTransactionStore } from '../store/useTransactionStore';
 import { useBudgetStore } from '../store/useBudgetStore';
@@ -22,14 +21,43 @@ const formatPeriodRange = (period) => {
 
 function SpendingTrendsChart({ labels, totals }) {
   const [hoveredIndex, setHoveredIndex] = useState(null);
+  const scrollRef = useRef(null);
 
   const maxDaily = Math.max(...totals, 1000);
+  const today = new Date().getUTCDate();
+  const todayIndex = labels.indexOf(today);
+  const barW = 52;
+  const gap = 12;
+  const slotW = barW + gap;
+  const visibleDays = 7;
+  const chartH = 260;
+
+  useEffect(() => {
+    if (scrollRef.current && todayIndex >= 0) {
+      const containerWidth = scrollRef.current.clientWidth;
+      const scrollTo = todayIndex * slotW + barW / 2 - containerWidth / 2;
+      scrollRef.current.scrollLeft = Math.max(0, scrollTo);
+    }
+  }, [todayIndex, labels.length]);
 
   const formatAmountLabel = (val) => {
     if (val >= 1000000) return `Rp${(val / 1000000).toFixed(1)}M`;
     if (val >= 1000) return `Rp${Math.round(val / 1000)}k`;
     return `Rp${val}`;
   };
+
+  const getBarColor = (isToday, isHovered) => {
+    if (isHovered) return isToday ? 'var(--tertiary)' : 'var(--primary-dark)';
+    if (isToday) return 'var(--tertiary)';
+    return 'var(--primary)';
+  };
+
+  const getTrackColor = (isToday) => {
+    if (isToday) return 'var(--tertiary-light)';
+    return 'var(--primary-light)';
+  };
+
+  const gridPcts = [100, 75, 50, 25];
 
   return (
     <>
@@ -42,120 +70,129 @@ function SpendingTrendsChart({ labels, totals }) {
         </div>
       </div>
 
-      <div className="line-chart-container" style={{ position: 'relative', minHeight: '220px', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', marginTop: '16px', flex: 1 }}>
-        <div className="line-chart-yaxis" style={{ position: 'absolute', left: 0, top: 0, bottom: '24px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', fontSize: '11px', fontWeight: '600', color: 'var(--text-secondary)', width: '60px', zIndex: 1 }}>
+      <div style={{ display: 'flex', justifyContent: 'center', marginTop: '16px', flex: 1 }}>
+        <div style={{ width: '60px', height: `${chartH}px`, position: 'relative', flexShrink: 0, zIndex: 2, background: 'var(--surface)' }}>
           {[100, 75, 50, 25, 0].map(pct => (
-            <span key={pct} style={{ textAlign: 'left' }}>
-              Rp{Math.round(maxDaily * pct / 100).toLocaleString('id-ID')}
+            <span
+              key={pct}
+              style={{
+                position: 'absolute',
+                right: 0,
+                top: pct === 100 ? '0' : pct === 0 ? `${chartH}px` : `${chartH * (1 - pct / 100)}px`,
+                transform: 'translateY(-50%)',
+                fontSize: '12px',
+                fontWeight: '600',
+                color: 'var(--text-secondary)',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {formatAmountLabel(maxDaily * pct / 100)}
             </span>
           ))}
         </div>
 
-        <svg 
-          viewBox="0 0 100 50" 
-          preserveAspectRatio="none" 
-          className="line-chart-svg" 
-          style={{ height: '200px', overflow: 'visible' }}
-          onMouseLeave={() => setHoveredIndex(null)}
-          onTouchEnd={() => setHoveredIndex(null)}
-        >
-          {totals.length > 0 && totals.map((v, i) => {
-            const N = totals.length;
-            const slotWidth = 100 / N;
-            const barWidth = slotWidth * 0.65;
-            const x = i * slotWidth + (slotWidth - barWidth) / 2;
-            const barHeight = (v / maxDaily) * 36;
-            const y = 50 - barHeight;
-            const isHovered = hoveredIndex === i;
-
-            const r = barWidth / 2;
-            let pathD = '';
-            if (barHeight > 0) {
-              if (barHeight <= r) {
-                pathD = `
-                  M ${x},50
-                  L ${x},${50 - barHeight}
-                  L ${x + barWidth},${50 - barHeight}
-                  L ${x + barWidth},50
-                  Z
-                `;
-              } else {
-                pathD = `
-                  M ${x},50
-                  L ${x},${y + r}
-                  A ${r},${r} 0 0,1 ${x + r},${y}
-                  L ${x + barWidth - r},${y}
-                  A ${r},${r} 0 0,1 ${x + barWidth},${y + r}
-                  L ${x + barWidth},50
-                  Z
-                `;
-              }
-            }
-
-            return (
-              <g key={i}>
-                <line 
-                  x1={x + barWidth / 2} 
-                  y1="0" 
-                  x2={x + barWidth / 2} 
-                  y2="50" 
-                  stroke="var(--border-light)" 
-                  strokeWidth="0.05" 
-                  strokeDasharray="1,1" 
-                />
-
-                {v > 0 && (
-                  <path
-                    d={pathD}
-                    fill={isHovered ? "var(--primary)" : "var(--primary-light)"}
-                    style={{ cursor: 'pointer', transition: 'fill 0.2s ease' }}
-                    onMouseEnter={() => setHoveredIndex(i)}
-                    onMouseMove={() => setHoveredIndex(i)}
-                    onTouchStart={() => setHoveredIndex(i)}
-                    onTouchMove={() => setHoveredIndex(i)}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', maxWidth: `${visibleDays * slotW}px` }}>
+          <div
+            ref={scrollRef}
+            className="chart-scroll-container"
+            style={{ overflowX: 'auto', overflowY: 'hidden' }}
+          >
+            <div style={{ width: `${labels.length * slotW}px` }}>
+              <div style={{
+                display: 'flex',
+                alignItems: 'flex-end',
+                height: `${chartH}px`,
+                position: 'relative',
+              }}>
+                {gridPcts.map(pct => (
+                  <div
+                    key={pct}
+                    style={{
+                      position: 'absolute',
+                      left: 0,
+                      right: 0,
+                      top: `${chartH * (1 - pct / 100)}px`,
+                      height: '1px',
+                      background: 'var(--border-light)',
+                      zIndex: 0,
+                    }}
                   />
-                )}
+                ))}
 
-                <rect
-                  x={i * slotWidth}
-                  y="0"
-                  width={slotWidth}
-                  height="50"
-                  fill="transparent"
-                  style={{ cursor: 'pointer' }}
-                  onMouseEnter={() => setHoveredIndex(i)}
-                  onMouseMove={() => setHoveredIndex(i)}
-                  onTouchStart={() => setHoveredIndex(i)}
-                  onTouchMove={() => setHoveredIndex(i)}
-                />
+                <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: '1px', background: 'var(--border-light)', zIndex: 0 }} />
 
-                {v > 0 && isHovered && (
-                  <text
-                    x={x + barWidth / 2}
-                    y={y - 2}
-                    textAnchor="middle"
-                    fontSize="3"
-                    fontWeight="700"
-                    fill="var(--primary)"
-                    style={{ pointerEvents: 'none', transition: 'fill 0.2s ease' }}
+                {totals.map((v, i) => {
+                  const pct = maxDaily > 0 ? (v / maxDaily) * 100 : 0;
+                  const isHovered = hoveredIndex === i;
+                  const isToday = i === todayIndex;
+                  return (
+                    <div
+                      key={i}
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'flex-end',
+                        width: `${slotW}px`,
+                        height: '100%',
+                        flexShrink: 0,
+                        position: 'relative',
+                        zIndex: 1,
+                      }}
+                      onMouseEnter={() => setHoveredIndex(i)}
+                      onMouseMove={() => setHoveredIndex(i)}
+                      onMouseLeave={() => setHoveredIndex(null)}
+                      onTouchStart={() => setHoveredIndex(i)}
+                      onTouchMove={() => setHoveredIndex(i)}
+                      onTouchEnd={() => setHoveredIndex(null)}
+                    >
+                      {v > 0 && isHovered && (
+                        <div style={{
+                          fontSize: '11px',
+                          fontWeight: '700',
+                          color: 'var(--primary)',
+                          marginBottom: '4px',
+                          whiteSpace: 'nowrap',
+                        }}>
+                          {formatAmountLabel(v)}
+                        </div>
+                      )}
+
+                      <div style={{
+                        width: `${barW}px`,
+                        height: `${Math.max(pct, v > 0 ? 4 : 0)}%`,
+                        minHeight: v > 0 ? '4px' : '0',
+                        background: v > 0 ? getBarColor(isToday, isHovered) : getTrackColor(isToday),
+                        borderRadius: '6px 6px 2px 2px',
+                        transition: 'all 0.2s ease',
+                        cursor: 'pointer',
+                        transform: isHovered ? 'scaleY(1.03)' : 'scaleY(1)',
+                        boxShadow: isHovered && v > 0 ? `0 4px 12px ${isToday ? 'rgba(245,158,11,0.4)' : 'rgba(91,108,245,0.4)'}` : 'none',
+                      }} />
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div style={{ display: 'flex', marginTop: '6px' }}>
+                {labels.map((l, i) => (
+                  <div
+                    key={i}
+                    style={{
+                      width: `${slotW}px`,
+                      flexShrink: 0,
+                      fontSize: '11px',
+                      fontWeight: '700',
+                      color: i === todayIndex ? 'var(--tertiary)' : 'var(--text-secondary)',
+                      textAlign: 'center',
+                    }}
                   >
-                    {formatAmountLabel(v)}
-                  </text>
-                )}
-              </g>
-            );
-          })}
-        </svg>
-
-        <div className="line-chart-labels" style={{ display: 'flex', justifyContent: 'space-between', marginTop: '8px', fontSize: '11px', fontWeight: '700', color: 'var(--text-secondary)' }}>
-          {labels.map((l, i) => {
-            const shouldShow = i === 0 || i === labels.length - 1 || l % 5 === 0;
-            return (
-              <span key={i} style={{ width: `${100 / labels.length}%`, textAlign: 'center', opacity: shouldShow ? 1 : 0 }}>
-                {l}
-              </span>
-            );
-          })}
+                    {l}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </>
@@ -404,38 +441,6 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Summary Cards */}
-      <div className="facts-grid">
-        <SummaryCard
-          label="Total Expenses"
-          value={formatCurrency(totalExpenses)}
-          icon="credit_card"
-          iconBg="var(--danger-light)"
-          iconColor="var(--danger)"
-          trend={`${expenseChange >= 0 ? '+' : ''}${expenseChange}%`}
-          trendDirection={expenseChange >= 0 ? 'down' : 'up'}
-          trendText="from last month"
-        />
-        <SummaryCard
-          label="Transactions"
-          value={transactionCount}
-          icon="receipt_long"
-          iconBg="var(--info-light)"
-          iconColor="var(--info)"
-          trend={`${transactionCountChange >= 0 ? '+' : ''}${transactionCountChange}%`}
-          trendDirection={transactionCountChange >= 0 ? 'up' : 'down'}
-          trendText="from last month"
-        />
-        <SummaryCard
-          label="Remaining Budget"
-          value={formatCurrency(remainingBudget)}
-          icon="account_balance_wallet"
-          iconBg="var(--primary-light)"
-          iconColor="var(--primary)"
-          trend={`${budgetUtilization}% used`}
-          trendText={`of ${formatCurrency(budgetLimit)} limit`}
-        />
-      </div>
       {/* Charts Row */}
       <div className="dashboard-grid" style={{ marginBottom: 'var(--gutter)', alignItems: 'stretch' }}>
         <div className="chart-card col-span-8" style={{ display: 'flex', flexDirection: 'column' }}>
