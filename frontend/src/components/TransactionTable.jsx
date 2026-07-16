@@ -18,9 +18,7 @@ export default function TransactionTable({
     return () => document.removeEventListener('click', closeDropdown);
   }, []);
 
-  const getCategoryClass = () => {
-    return 'surface-container-highest text-primary';
-  };
+  const getCategoryClass = () => 'surface-container-highest text-primary';
 
   const displayList = limit ? transactions.slice(0, limit) : transactions;
 
@@ -58,7 +56,7 @@ export default function TransactionTable({
                   </div>
                 </td>
                 <td data-label="Category">
-                  <span className={`category-chip ${txn.categoryClass || getCategoryClass(txn.category)}`}>
+                  <span className={`category-chip ${txn.categoryClass || getCategoryClass()}`}>
                     {txn.category}
                   </span>
                 </td>
