@@ -163,35 +163,37 @@ export default function Budgets() {
           <h1 className="page-title">Budget Management</h1>
           <p className="page-subtitle">Set and monitor your spending limits across categories.</p>
         </div>
-        {isCurrentPeriod && (
-          <button className="btn-primary" onClick={openAdd}>+ New Budget</button>
-        )}
-      </div>
-
-      <div className="page-header" style={{ marginTop: 16 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <button className="icon-btn" onClick={goPrev} aria-label="Previous period">
-            <span className="material-symbols-outlined">chevron_left</span>
-          </button>
-          <span style={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 15 }}>
-            {formatPeriodLabel(selectedPeriod)}
-          </span>
-          <button
-            className="icon-btn"
-            onClick={goNext}
-            disabled={isCurrentPeriod}
-            aria-label="Next period"
-            style={{ opacity: isCurrentPeriod ? 0.35 : 1, cursor: isCurrentPeriod ? 'not-allowed' : 'pointer' }}
-          >
-            <span className="material-symbols-outlined">chevron_right</span>
-          </button>
+        <div className="page-actions">
+          <div className="period-picker">
+            <button className="icon-btn" onClick={goPrev} aria-label="Previous period">
+              <span className="material-symbols-outlined">chevron_left</span>
+            </button>
+            <span className="period-picker-label">
+              {formatPeriodLabel(selectedPeriod)}
+            </span>
+            <button
+              className="icon-btn"
+              onClick={goNext}
+              disabled={isCurrentPeriod}
+              aria-label="Next period"
+              style={{ opacity: isCurrentPeriod ? 0.35 : 1, cursor: isCurrentPeriod ? 'not-allowed' : 'pointer' }}
+            >
+              <span className="material-symbols-outlined">chevron_right</span>
+            </button>
+          </div>
           {!isCurrentPeriod && (
             <button
               className="btn-secondary"
-              style={{ padding: '4px 12px', fontSize: 13 }}
               onClick={() => setSelectedPeriod(getCurrentPeriod('monthly'))}
+              style={{ whiteSpace: 'nowrap' }}
             >
-              Back to current
+              Current
+            </button>
+          )}
+          {isCurrentPeriod && (
+            <button className="btn-primary" onClick={openAdd}>
+              <span className="material-symbols-outlined">add</span>
+              New Budget
             </button>
           )}
         </div>

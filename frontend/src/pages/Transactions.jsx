@@ -129,7 +129,12 @@ export default function Transactions() {
           <h1 className="page-title">History Expense</h1>
           <p className="page-subtitle">View and manage all your recorded expenses.</p>
         </div>
-        <button className="btn-primary" onClick={openAdd}>+ Add Expense</button>
+        <div className="page-actions">
+          <button className="btn-primary" onClick={openAdd}>
+            <span className="material-symbols-outlined">add</span>
+            Add Expense
+          </button>
+        </div>
       </div>
 
       <div className="search-bar" style={{ marginBottom: '16px' }}>
