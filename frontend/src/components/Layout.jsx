@@ -5,8 +5,12 @@ import Topbar from './Topbar';
 export default function Layout({ children }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
-    const saved = localStorage.getItem('sidebarCollapsed');
-    return saved ? JSON.parse(saved) : false;
+    try {
+      const saved = localStorage.getItem('sidebarCollapsed');
+      return saved ? JSON.parse(saved) : false;
+    } catch {
+      return false;
+    }
   });
 
   useEffect(() => {
@@ -41,7 +45,11 @@ export default function Layout({ children }) {
         }}
       >
         <div className="mobile-sidebar-inner">
-          <Sidebar onNavigate={() => setMobileMenuOpen(false)} />
+          <Sidebar
+            collapsed={sidebarCollapsed}
+            onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
+            onNavigate={() => setMobileMenuOpen(false)}
+          />
         </div>
       </div>
       <div className="main-area">

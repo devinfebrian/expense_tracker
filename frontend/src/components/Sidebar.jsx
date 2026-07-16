@@ -1,7 +1,7 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth.js';
 
-export default function Sidebar({ onNavigate }) {
+export default function Sidebar({ onNavigate, collapsed = false, onToggleCollapse = () => {} }) {
   const { pathname } = useLocation();
   const { user, logout } = useAuth();
   const navigate = useNavigate();
@@ -40,7 +40,7 @@ export default function Sidebar({ onNavigate }) {
       <nav className="sidebar-nav">
         {mainLinks.map(l =>
           l.disabled ? (
-            <span key={l.label} className="sidebar-link" style={{ opacity: 0.5, cursor: 'not-allowed' }} title={l.label}>
+            <span key={l.href} className="sidebar-link" style={{ opacity: 0.5, cursor: 'not-allowed' }} title={l.label}>
               <span className="material-symbols-outlined">{l.icon}</span>
               {!collapsed && <span>{l.label}</span>}
             </span>
@@ -60,7 +60,7 @@ export default function Sidebar({ onNavigate }) {
                 <img src={user.avatar} alt={user.name || 'User'} />
               ) : (
                 <span className="sidebar-avatar-fallback">
-                  {(user?.name || 'U').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                  {(user?.name || 'U').split(' ').filter(Boolean).map(n => n[0]).join('').slice(0, 2).toUpperCase()}
                 </span>
               )}
             </div>
