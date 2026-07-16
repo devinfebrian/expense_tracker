@@ -121,13 +121,13 @@
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.05em;
-  color: var(--outline);
+  color: var(--primary);
   text-transform: uppercase;
 }
 
 .profile-card-subtitle {
   font-size: 12px;
-  color: var(--outline);
+  color: var(--text-secondary);
 }
 
 .profile-card-body {

@@ -330,3 +330,27 @@
     transform: translateY(0);
   }
 }
+
+/* Mobile Layout Spacing Adjustments */
+@media (max-width: 767px) {
+  .insights-container {
+    gap: var(--space-md) !important;
+    margin-top: var(--space-md) !important;
+  }
+  .insights-header-card {
+    padding: var(--space-md) !important;
+    gap: var(--space-md) !important;
+  }
+  .score-circle-wrapper {
+    width: 120px !important;
+    height: 120px !important;
+  }
+  .score-number {
+    font-size: 32px !important;
+  }
+  .observation-card,
+  .recommendation-card {
+    padding: var(--space-md) !important;
+    gap: var(--space-md) !important;
+  }
+}

@@ -2,13 +2,13 @@
 
 .auth-page {
   min-height: 100vh;
-  background-color: #f8f9ff;
+  background-color: var(--background);
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
   display: flex;
   flex-direction: column;
   position: relative;
   overflow-x: hidden;
-  color: #0b1c30;
+  color: var(--text-primary);
 }
 
 .auth-header {
@@ -30,21 +30,20 @@
   font-family: 'Hanken Grotesk', system-ui, sans-serif;
   font-size: 24px;
   font-weight: 700;
-  color: #0b1c30;
+  color: var(--primary);
   letter-spacing: -0.01em;
 }
 
 .auth-header-link {
   font-size: 14px;
   font-weight: 600;
-  color: #76777d;
+  color: var(--text-secondary);
   text-decoration: none;
   transition: color 0.2s;
 }
 
 .auth-header-link:hover {
-  color: #000000;
-  text-decoration: underline;
+  color: var(--primary);
 }
 
 .auth-main {
@@ -63,23 +62,23 @@
 
 .auth-brand-center {
   text-align: center;
-  margin-bottom: 32px;
+  margin-bottom: 24px;
 }
 
 .auth-brand-title {
   font-family: 'Hanken Grotesk', system-ui, sans-serif;
   font-size: 32px;
   font-weight: 700;
-  color: #0b1c30;
+  color: var(--text-primary);
   margin: 0;
 }
 
 .auth-card {
-  background-color: #ffffff;
-  border: 1px solid #c6c6cd;
-  border-radius: 8px;
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
   padding: 32px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow);
 }
 
 .auth-card-header {
@@ -90,13 +89,13 @@
   font-family: 'Hanken Grotesk', system-ui, sans-serif;
   font-size: 24px;
   font-weight: 600;
-  color: #0b1c30;
+  color: var(--text-primary);
   margin: 0 0 4px 0;
 }
 
 .auth-card-subtitle {
   font-size: 14px;
-  color: #45464d;
+  color: var(--text-secondary);
   margin: 0;
 }
 
@@ -121,19 +120,21 @@
 .auth-label {
   font-size: 12px;
   font-weight: 600;
-  color: #45464d;
+  color: var(--text-secondary);
   letter-spacing: 0.05em;
   text-transform: uppercase;
 }
 
 .auth-link-forgot {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
-  color: #000000;
+  color: var(--primary);
   text-decoration: none;
+  transition: color 0.2s;
 }
 
 .auth-link-forgot:hover {
+  color: var(--primary-dark);
   text-decoration: underline;
 }
 
@@ -146,7 +147,7 @@
 .auth-input-icon {
   position: absolute;
   left: 16px;
-  color: #76777d;
+  color: var(--text-muted);
   pointer-events: none;
   font-size: 20px;
   transition: color 0.2s;
@@ -155,53 +156,58 @@
 
 .auth-input {
   width: 100%;
-  background-color: #ffffff;
-  border: 1px solid #c6c6cd;
-  border-radius: 8px;
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
   padding: 12px 16px 12px 44px;
   font-family: 'Inter', sans-serif;
-  font-size: 16px;
-  color: #0b1c30;
-  transition: border-color 0.2s;
+  font-size: 15px;
+  color: var(--text-primary);
+  transition: all 0.2s;
   outline: none;
   box-sizing: border-box;
 }
 
 .auth-input:focus {
-  border-color: #000000;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-light);
 }
 
 /* Icon focus styles */
 .auth-input:focus ~ .auth-input-icon {
-  color: #000000;
+  color: var(--primary);
 }
 
 .auth-btn-submit {
   width: 100%;
-  background-color: #000000;
+  background-color: var(--primary);
   color: #ffffff;
   font-family: 'Inter', sans-serif;
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 600;
   padding: 12px 24px;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   border: none;
   cursor: pointer;
-  transition: opacity 0.2s, background-color 0.2s;
+  transition: all 0.2s;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 4px 12px rgba(91, 108, 245, 0.2);
 }
 
 .auth-btn-submit:hover:not(:disabled) {
-  opacity: 0.9;
+  background-color: var(--primary-dark);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(91, 108, 245, 0.25);
 }
 
 .auth-btn-submit:disabled {
-  opacity: 0.7;
+  opacity: 0.6;
   cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
 }
 
 .auth-footer {
@@ -211,17 +217,19 @@
 
 .auth-footer-text {
   font-size: 14px;
-  color: #45464d;
+  color: var(--text-secondary);
   margin: 0;
 }
 
 .auth-footer-link {
   font-weight: 600;
-  color: #000000;
+  color: var(--primary);
   text-decoration: none;
+  transition: color 0.2s;
 }
 
 .auth-footer-link:hover {
+  color: var(--primary-dark);
   text-decoration: underline;
 }
 
@@ -231,7 +239,7 @@
   }
 
   .auth-card {
-    padding: 24px;
+    padding: var(--space-md);
   }
 
   .auth-card-title {
@@ -243,7 +251,7 @@
   }
 
   .auth-input {
-    font-size: 16px;
+    font-size: 15px;
   }
 }
 
@@ -270,19 +278,19 @@
 
 .auth-bg-pattern-2 {
   position: absolute;
-  bottom: -10%;
-  left: -10%;
+  top: -10%;
+  right: -10%;
   width: 40%;
   height: 40%;
   opacity: 0.03;
 }
 
 .auth-error-banner {
-  background-color: #ffdad6;
-  color: #93000a;
-  border: 1px solid #ba1a1a;
+  background-color: var(--danger-light);
+  color: var(--danger);
+  border: 1px solid rgba(239, 68, 68, 0.15);
   padding: 12px;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   margin-bottom: 16px;
   font-size: 14px;
   text-align: center;
@@ -294,10 +302,10 @@
 
 .strength-bar-container {
   width: 100%;
-  height: 4px;
-  background-color: #e5eeff;
-  border-radius: 9999px;
-  margin-top: 4px;
+  height: 6px;
+  background-color: var(--border-light);
+  border-radius: var(--radius-full);
+  margin-top: 6px;
   overflow: hidden;
 }
 
@@ -315,16 +323,29 @@
 }
 
 .strength-weak {
-  background-color: #ba1a1a;
-  color: #ba1a1a;
+  background-color: var(--danger);
+  color: var(--danger);
 }
 
 .strength-medium {
-  background-color: #92002a;
-  color: #92002a;
+  background-color: var(--tertiary);
+  color: var(--tertiary);
 }
 
 .strength-strong {
-  background-color: #006c49;
-  color: #006c49;
+  background-color: var(--secondary);
+  color: var(--secondary);
+}
+
+/* Helper utility text classes for password strength */
+.text-error {
+  color: var(--danger) !important;
+}
+
+.text-on-tertiary-fixed-variant {
+  color: var(--tertiary) !important;
+}
+
+.text-on-secondary-container {
+  color: var(--secondary) !important;
 }

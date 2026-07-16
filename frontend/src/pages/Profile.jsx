@@ -122,7 +122,7 @@ export default function Profile() {
                 </div>
               </div>
               <h2 className="profile-name">{user?.name || 'User Account'}</h2>
-              <p style={{ fontSize: 13, color: 'var(--outline)', margin: 0, marginBottom: 24 }}>{user?.email}</p>
+              <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0, marginBottom: 24 }}>{user?.email}</p>
 
               <button
                 onClick={handleLogout}

@@ -7,6 +7,7 @@ export default function Register() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPass, setShowPass] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -69,9 +70,14 @@ export default function Register() {
 
       <main className="auth-main">
         <div className="auth-card-wrapper">
+          <div className="auth-brand-center">
+            <h1 className="auth-brand-title">Duidku</h1>
+          </div>
+
           <div className="auth-card">
-            <div className="auth-brand-center" style={{ marginBottom: '24px' }}>
-              <h1 className="auth-brand-title">Create Account</h1>
+            <div className="auth-card-header">
+              <h2 className="auth-card-title">Create Account</h2>
+              <p className="auth-card-subtitle">Please enter your details to sign up</p>
             </div>
 
             {error && (
@@ -85,31 +91,35 @@ export default function Register() {
               {/* Name Field */}
               <div className="auth-field">
                 <label htmlFor="name" className="auth-label">Full Name</label>
-                <input 
-                  id="name" 
-                  type="text" 
-                  value={name} 
-                  onChange={(e) => setName(e.target.value)} 
-                  placeholder="Enter your full name" 
-                  required 
-                  className="auth-input"
-                  style={{ paddingLeft: '16px' }} // override left padding since there is no icon
-                />
+                <div className="auth-input-wrapper">
+                  <input 
+                    id="name" 
+                    type="text" 
+                    value={name} 
+                    onChange={(e) => setName(e.target.value)} 
+                    placeholder="Enter your full name" 
+                    required 
+                    className="auth-input"
+                  />
+                  <span className="material-symbols-outlined auth-input-icon">person</span>
+                </div>
               </div>
 
               {/* Email Field */}
               <div className="auth-field">
                 <label htmlFor="email" className="auth-label">Email Address</label>
-                <input 
-                  id="email" 
-                  type="email" 
-                  value={email} 
-                  onChange={(e) => setEmail(e.target.value)} 
-                  placeholder="name@company.com" 
-                  required 
-                  className="auth-input"
-                  style={{ paddingLeft: '16px' }} // override left padding since there is no icon
-                />
+                <div className="auth-input-wrapper">
+                  <input 
+                    id="email" 
+                    type="email" 
+                    value={email} 
+                    onChange={(e) => setEmail(e.target.value)} 
+                    placeholder="name@company.com" 
+                    required 
+                    className="auth-input"
+                  />
+                  <span className="material-symbols-outlined auth-input-icon">mail</span>
+                </div>
               </div>
 
               {/* Password Field */}
@@ -123,16 +133,40 @@ export default function Register() {
                     {getStrengthText(strength)}
                   </span>
                 </div>
-                <input 
-                  id="password" 
-                  type="password" 
-                  value={password} 
-                  onChange={(e) => setPassword(e.target.value)} 
-                  placeholder="••••••••" 
-                  required 
-                  className="auth-input"
-                  style={{ paddingLeft: '16px' }} // override left padding since there is no icon
-                />
+                <div className="auth-input-wrapper">
+                  <input 
+                    id="password" 
+                    type={showPass ? 'text' : 'password'} 
+                    value={password} 
+                    onChange={(e) => setPassword(e.target.value)} 
+                    placeholder="••••••••" 
+                    required 
+                    className="auth-input"
+                    style={{ paddingRight: '48px' }}
+                  />
+                  <span className="material-symbols-outlined auth-input-icon">lock</span>
+                  <button 
+                    type="button" 
+                    onClick={() => setShowPass(!showPass)} 
+                    aria-label={showPass ? 'Hide password' : 'Show password'}
+                    style={{ 
+                      position: 'absolute', 
+                      right: '12px', 
+                      background: 'none', 
+                      border: 'none', 
+                      cursor: 'pointer', 
+                      color: 'var(--text-secondary)', 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center',
+                      padding: '4px'
+                    }}
+                  >
+                    <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>
+                      {showPass ? 'visibility' : 'visibility_off'}
+                    </span>
+                  </button>
+                </div>
                 
                 {/* Strength Bar */}
                 <div className="strength-bar-container">
@@ -149,7 +183,6 @@ export default function Register() {
                 type="submit" 
                 disabled={loading} 
                 className="auth-btn-submit" 
-                style={{ backgroundColor: '#0F172A' }}
               >
                 {loading ? (
                   <>
