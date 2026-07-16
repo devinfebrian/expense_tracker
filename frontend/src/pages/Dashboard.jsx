@@ -629,6 +629,23 @@ export default function Dashboard() {
               </div>
             )}
           </div>
+          <div className="category-list">
+            {categoryBreakdown.length === 0 ? (
+              <div className="category-item" style={{ color: 'var(--text-secondary)', justifyContent: 'center' }}>
+                No expenses this period
+              </div>
+            ) : (
+              categoryBreakdown.map((c, index) => (
+                <div key={c.label + index} className="category-item">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-sm)' }}>
+                    <span className="category-dot" style={{ background: c.color }} />
+                    <span>{c.label}</span>
+                  </div>
+                  <span className="category-amount">{formatCurrency(c.amount)}</span>
+                </div>
+              ))
+            )}
+          </div>
         </div>
       </div>
 
