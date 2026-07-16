@@ -1781,7 +1781,7 @@ body.modal-open .sidebar-link.active {
 .dropdown-menu {
   position: absolute;
   right: 0;
-  top: 100%;
+  bottom: 100%;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
@@ -1789,7 +1789,7 @@ body.modal-open .sidebar-link.active {
   z-index: 100;
   min-width: 140px;
   padding: 4px;
-  margin-top: 4px;
+  margin-bottom: 4px;
 }
 
 .dropdown-item {
