@@ -13,6 +13,7 @@ export default function BudgetModal({
   isOpen,
   editingItem,
   categories,
+  existingBudgets = [],
   onClose,
   onSave,
   error
@@ -47,6 +48,13 @@ export default function BudgetModal({
     const limit = parseFloat(cleanLimit);
     if (isNaN(limit) || limit <= 0) {
       alert('Limit must be greater than 0');
+      return;
+    }
+    const duplicate = existingBudgets.find(
+      b => b.category_id === form.category_id && b.type === form.type && (!editingItem || b.budget_id !== editingItem.budget_id)
+    );
+    if (duplicate) {
+      alert(`Budget for this category already exists (${duplicate.type})`);
       return;
     }
     onSave({

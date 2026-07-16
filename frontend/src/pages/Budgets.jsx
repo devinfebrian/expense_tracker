@@ -362,6 +362,7 @@ export default function Budgets() {
         isOpen={showModal}
         editingItem={editing}
         categories={categories}
+        existingBudgets={calculatedBudgets}
         onClose={() => setShowModal(false)}
         onSave={handleSave}
         error={error}
