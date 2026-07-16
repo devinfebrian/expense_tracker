@@ -66,9 +66,11 @@ export default function Sidebar({ collapsed = false, onToggleCollapse = () => {}
             </div>
             {!collapsed && <span className="sidebar-profile-label">{user?.name || 'User'}</span>}
           </Link>
-          <button onClick={handleLogout} className="sidebar-btn" title="Log out">
-            <span className="material-symbols-outlined">logout</span>
-          </button>
+          {!collapsed && (
+            <button onClick={handleLogout} className="sidebar-btn" title="Log out">
+              <span className="material-symbols-outlined">logout</span>
+            </button>
+          )}
         </div>
       </div>
       <button

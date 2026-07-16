@@ -279,7 +279,15 @@ img {
 }
 
 .sidebar.collapsed .sidebar-header {
-  padding: 0 var(--space-sm);
+  padding: 0;
+  justify-content: center;
+}
+
+.sidebar.collapsed .sidebar-brand {
+  padding: 0;
+  justify-content: center;
+  margin-bottom: 0;
+  width: 100%;
 }
 
 .sidebar-collapse-btn {
@@ -323,7 +331,7 @@ img {
   display: flex;
   align-items: center;
   gap: var(--space-md);
-  padding: 0 var(--space-lg);
+  padding: 0 var(--space-xl);
   margin-bottom: var(--space-xl);
 }
 
