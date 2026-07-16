@@ -215,7 +215,11 @@ export default function Budgets() {
       )}
 
       <div className="budget-grid">
-        {calculatedBudgets.map(b => {
+        {[...calculatedBudgets].sort((a, b) => {
+          const typeOrder = { daily: 0, weekly: 1, monthly: 2 };
+          if (a.category_id !== b.category_id) return a.category_id.localeCompare(b.category_id);
+          return (typeOrder[a.type] ?? 3) - (typeOrder[b.type] ?? 3);
+        }).map(b => {
           const pct = Math.min(b.percentage, 100);
           const warn = b.percentage >= 100;
           return (
