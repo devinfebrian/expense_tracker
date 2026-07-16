@@ -35,7 +35,19 @@ export default function Budgets() {
   }, [loadBudgets, loadTransactions, loadCategories, user, selectedPeriod]);
 
   const calculatedBudgets = budgets.map(b => {
-    const range = getPeriodRange(b.period);
+    let range;
+    if (b.type === 'daily') {
+      range = getPeriodRange(getCurrentPeriod('daily'));
+    } else if (b.type === 'weekly') {
+      const mondayStr = getCurrentPeriod('weekly');
+      const parts = mondayStr.split('-');
+      const start = new Date(Date.UTC(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2])));
+      const end = new Date(start);
+      end.setUTCDate(end.getUTCDate() + 7);
+      range = { start, end };
+    } else {
+      range = getPeriodRange(b.period);
+    }
     const categoryTxns = transactions.filter(t => {
       if (t.category_id !== b.category_id) return false;
       if (!range) return false;
@@ -225,20 +237,20 @@ export default function Budgets() {
                 )}
               </div>
               <div className="budget-card-amounts">
-                <span className={`budget-card-spent ${warn ? 'text-tertiary' : 'text-secondary'}`}>
+                <span className={`budget-card-spent ${warn ? 'text-error' : 'text-secondary'}`}>
                   Rp{b.spent.toLocaleString('id-ID')}
                 </span>
                 <span className="budget-card-limit">/ Rp{b.limit.toLocaleString('id-ID')}</span>
               </div>
               <div className="progress-bar">
-                <div className={`progress-fill ${warn ? 'bg-tertiary' : 'bg-secondary'}`} style={{ width: `${pct}%` }} />
+                <div className={`progress-fill ${warn ? 'bg-danger' : 'bg-secondary'}`} style={{ width: `${pct}%`, ...(warn ? { background: 'var(--danger)' } : {}) }} />
               </div>
               <div className="budget-card-status" style={{ marginTop: '8px' }}>
                 <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                   <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>{b.icon}</span>
                   {b.category_name}
                 </span>
-                <span className={warn ? 'text-tertiary' : ''} style={{ fontWeight: 600 }}>{b.status}</span>
+                <span className={warn ? 'text-error' : ''} style={{ fontWeight: 600 }}>{b.status}</span>
               </div>
             </div>
           );
