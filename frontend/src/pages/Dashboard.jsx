@@ -380,11 +380,11 @@ export default function Dashboard() {
           <p className="page-subtitle">Here&apos;s what&apos;s happening with your expenses today.</p>
         </div>
         <div className="page-actions">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', padding: '6px 10px' }}>
+          <div className="period-picker">
             <button className="icon-btn" onClick={goPrev} aria-label="Previous month">
               <span className="material-symbols-outlined">chevron_left</span>
             </button>
-            <span style={{ fontWeight: 600, fontSize: 14, textAlign: 'center', color: 'var(--text-primary)' }}>
+            <span className="period-picker-label">
               {formatPeriodRange(selectedPeriod)}
             </span>
             <button
@@ -443,6 +443,93 @@ export default function Dashboard() {
             labels={dailyLabels}
             totals={dailyTotals}
           />
+        </div>
+
+        <div className="chart-card col-span-4" style={{ display: 'flex', flexDirection: 'column' }}>
+          <div className="chart-header">
+            <h4 className="chart-title">Budget Overview</h4>
+            <Link to="/budgets" className="chart-link">
+              View all <span className="material-symbols-outlined" style={{ fontSize: 16 }}>chevron_right</span>
+            </Link>
+          </div>
+          <div className="scrollable-container budget-scrollable" style={{ maxHeight: '430px', flex: 1 }}>
+            {budgetOverview.length === 0 ? (
+              <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '24px 0' }}>
+                No active budgets set.
+                <br />
+                <Link to="/budgets" className="chart-link" style={{ marginTop: 8, display: 'inline-block' }}>
+                  Set a budget
+                </Link>
+              </div>
+            ) : (
+              budgetOverview.map(b => (
+                <div key={b.budget_id || b.id} className="budget-item">
+                  <div className="budget-header">
+                    <span className="budget-label">
+                      <span className="category-dot" style={{ background: b.color }} />
+                      {b.category_name || b.name}
+                    </span>
+                    <span className="budget-amount">
+                      <strong>{formatCurrency(b.spent)}</strong> / {formatCurrency(b.limit)}
+                    </span>
+                  </div>
+                  <div className="progress-bar">
+                    <div
+                      className="progress-fill"
+                      style={{
+                        width: `${Math.min(b.percentage, 100)}%`,
+                        background: b.percentage > 90 ? 'var(--danger)' : b.percentage > 70 ? 'var(--tertiary)' : b.color,
+                      }}
+                    />
+                  </div>
+                  <div className="budget-footer">
+                    <span>{b.percentage}% used</span>
+                    <span style={{ color: b.percentage > 100 ? 'var(--danger)' : 'var(--text-secondary)' }}>
+                      {b.percentage > 100 ? 'Exceeded' : b.percentage > 90 ? 'Almost reached' : 'On track'}
+                    </span>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Bottom Row */}
+      <div className="dashboard-grid" style={{ alignItems: 'stretch' }}>
+        <div className="chart-card col-span-8" style={{ display: 'flex', flexDirection: 'column' }}>
+          <div className="chart-header">
+            <h4 className="chart-title">Transactions</h4>
+            <Link to="/transactions" className="chart-link">
+              View all <span className="material-symbols-outlined" style={{ fontSize: 16 }}>chevron_right</span>
+            </Link>
+          </div>
+          <div className="scrollable-container" style={{ maxHeight: '430px', flex: 1 }}>
+            {recentTransactions.length === 0 ? (
+              <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '24px 0' }}>
+                No transactions this period.
+              </div>
+            ) : (
+              recentTransactions.map(txn => {
+                const style = getCategoryStyle(txn.category);
+                return (
+                  <div key={txn.transaction_id || txn.id} className="transaction-item">
+                    <div className="transaction-icon" style={{ background: style.bg, color: style.color }}>
+                      <span className="material-symbols-outlined">{style.icon}</span>
+                    </div>
+                    <div className="transaction-info">
+                      <div className="transaction-name">{txn.merchant}</div>
+                      <div className="transaction-category">{txn.category}</div>
+                    </div>
+                    <div className="transaction-date">{new Date(txn.date).toLocaleDateString('en-US', { timeZone: 'UTC', month: 'short', day: 'numeric', year: 'numeric' })}</div>
+                    <div className="transaction-amount expense">
+                      -{formatCurrency(txn.amount)}
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
         </div>
 
         <div className="chart-card col-span-4" style={{ display: 'flex', flexDirection: 'column' }}>
@@ -540,93 +627,6 @@ export default function Dashboard() {
                   {formatCurrency(categoryBreakdown[hoveredSlice].amount)}
                 </div>
               </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Bottom Row */}
-      <div className="dashboard-grid" style={{ alignItems: 'stretch' }}>
-        <div className="chart-card col-span-8" style={{ display: 'flex', flexDirection: 'column' }}>
-          <div className="chart-header">
-            <h4 className="chart-title">Transactions</h4>
-            <Link to="/transactions" className="chart-link">
-              View all <span className="material-symbols-outlined" style={{ fontSize: 16 }}>chevron_right</span>
-            </Link>
-          </div>
-          <div className="scrollable-container" style={{ maxHeight: '430px', flex: 1 }}>
-            {recentTransactions.length === 0 ? (
-              <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '24px 0' }}>
-                No transactions this period.
-              </div>
-            ) : (
-              recentTransactions.map(txn => {
-                const style = getCategoryStyle(txn.category);
-                return (
-                  <div key={txn.transaction_id || txn.id} className="transaction-item">
-                    <div className="transaction-icon" style={{ background: style.bg, color: style.color }}>
-                      <span className="material-symbols-outlined">{style.icon}</span>
-                    </div>
-                    <div className="transaction-info">
-                      <div className="transaction-name">{txn.merchant}</div>
-                      <div className="transaction-category">{txn.category}</div>
-                    </div>
-                    <div className="transaction-date">{new Date(txn.date).toLocaleDateString('en-US', { timeZone: 'UTC', month: 'short', day: 'numeric', year: 'numeric' })}</div>
-                    <div className="transaction-amount expense">
-                      -{formatCurrency(txn.amount)}
-                    </div>
-                  </div>
-                );
-              })
-            )}
-          </div>
-        </div>
-
-        <div className="chart-card col-span-4" style={{ display: 'flex', flexDirection: 'column' }}>
-          <div className="chart-header">
-            <h4 className="chart-title">Budget Overview</h4>
-            <Link to="/budgets" className="chart-link">
-              View all <span className="material-symbols-outlined" style={{ fontSize: 16 }}>chevron_right</span>
-            </Link>
-          </div>
-          <div className="scrollable-container budget-scrollable" style={{ maxHeight: '430px', flex: 1 }}>
-            {budgetOverview.length === 0 ? (
-              <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '24px 0' }}>
-                No active budgets set.
-                <br />
-                <Link to="/budgets" className="chart-link" style={{ marginTop: 8, display: 'inline-block' }}>
-                  Set a budget
-                </Link>
-              </div>
-            ) : (
-              budgetOverview.map(b => (
-                <div key={b.budget_id || b.id} className="budget-item">
-                  <div className="budget-header">
-                    <span className="budget-label">
-                      <span className="category-dot" style={{ background: b.color }} />
-                      {b.category_name || b.name}
-                    </span>
-                    <span className="budget-amount">
-                      <strong>{formatCurrency(b.spent)}</strong> / {formatCurrency(b.limit)}
-                    </span>
-                  </div>
-                  <div className="progress-bar">
-                    <div
-                      className="progress-fill"
-                      style={{
-                        width: `${Math.min(b.percentage, 100)}%`,
-                        background: b.percentage > 90 ? 'var(--danger)' : b.percentage > 70 ? 'var(--tertiary)' : b.color,
-                      }}
-                    />
-                  </div>
-                  <div className="budget-footer">
-                    <span>{b.percentage}% used</span>
-                    <span style={{ color: b.percentage > 100 ? 'var(--danger)' : 'var(--text-secondary)' }}>
-                      {b.percentage > 100 ? 'Exceeded' : b.percentage > 90 ? 'Almost reached' : 'On track'}
-                    </span>
-                  </div>
-                </div>
-              ))
             )}
           </div>
         </div>
